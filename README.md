@@ -13,8 +13,10 @@ See the project report (`1791647043721_AI.docx`) for the full design.
 | FastAPI backend (`/`, `/healthz`, `/analyze`) | done |
 | Ollama / Llama 3.1 integration | done |
 | Structured JSON assessment (severity, MITRE, IOCs) | done |
-| Sample log corpus | 3 files, labelled by scenario |
-| Test suite | 6 tests, runs without Ollama |
+| MITRE catalogue (constrains prompt, repairs output) | done |
+| Sample log corpus | 3 files + `labels.json` ground truth |
+| Prompt evaluation harness | done (`scripts/compare_prompts.py`) |
+| Test suite | 14 tests, runs without Ollama |
 | Deterministic pre-filter | not started (Phase 3) |
 | Streamlit dashboard | not started (Phase 4) |
 | Evaluation harness | not started (Phase 5) |
@@ -115,18 +117,52 @@ app/
   llm.py               Ollama client; validates the model's JSON
   models.py            request/response + Analysis schema
   config.py            environment-driven settings
+  mitre.py             curated ATT&CK catalogue for log analysis
   prompts/
-    analyze_v1.txt     versioned prompt (change the version, not the file)
+    analyze_v1.txt     v1: plain instructions (kept for comparison)
+    analyze_v2.txt     v2: escalation rules + few-shot (default)
 dashboard/             Streamlit UI (Phase 4)
-data/samples/          labelled log corpus
+data/samples/          log corpus + labels.json ground truth
+data/eval/             evaluation output
+scripts/compare_prompts.py   scores prompt versions against the labels
 scripts/smoke.sh       end-to-end check against a running API
 tests/test_api.py
 ```
+
+## Evaluation
+
+```bash
+.venv/bin/python scripts/compare_prompts.py analyze_v1 analyze_v2
+```
+
+Scores each prompt version's verdict, severity and ATT&CK technique against
+`data/samples/labels.json` and writes `data/eval/prompt_comparison.md`.
+
+Measured on llama3.1:8b:
+
+| prompt | fields correct | mean latency |
+|---|---|---|
+| analyze_v1 | 3 / 9 | 18.1 s |
+| analyze_v2 | 9 / 9 | 20.2 s |
+
+v1 under-called both attacks as `suspicious/medium` and labelled each of them
+`T1210`. v2 adds explicit escalation rules (a success after repeated failures
+is a *successful* breach; `curl | sh` is RCE; a UID 0 account is critical),
+three worked examples, and a closed list of techniques to choose from.
+
+**Caveat for anyone reading these numbers:** the corpus is three files and the
+v2 examples resemble them, so this measures that the escalation rules fire, not
+that the system generalises. A held-out set of logs the prompt was not written
+against is needed before the figure means anything. Latency is unchanged in
+practice — the larger prompt costs ~2 s.
 
 ## Notes
 
 - The prompt is versioned on disk and echoed in every response, so results stay
   traceable to the prompt that produced them — needed for the Phase 5 evaluation.
+- Technique *names* are looked up in `app/mitre.py`, never taken from the model,
+  and an ID outside the catalogue is dropped rather than shown: a wrong
+  technique misleads an analyst more than a missing one does.
 - Ollama is asked for `format: "json"`, which constrains decoding to valid JSON
   but does not enforce our schema; `app/llm.py` validates against `Analysis` and
   returns HTTP 502 on a mismatch rather than passing junk downstream.

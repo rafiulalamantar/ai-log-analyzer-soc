@@ -5,6 +5,7 @@ import time
 import httpx
 from pydantic import ValidationError
 
+from . import mitre
 from .config import settings
 from .models import Analysis
 
@@ -18,9 +19,12 @@ class LLMBadOutput(RuntimeError):
 
 
 def build_prompt(log: str, source: str | None) -> str:
+    # str.replace, not str.format: the prompt contains literal JSON braces.
     template = settings.prompt_path.read_text(encoding="utf-8")
-    return template.replace("{log}", log[: settings.max_log_chars]).replace(
-        "{source}", source or "unspecified"
+    return (
+        template.replace("{log}", log[: settings.max_log_chars])
+        .replace("{source}", source or "unspecified")
+        .replace("{mitre_catalog}", mitre.catalog_for_prompt())
     )
 
 
@@ -53,9 +57,16 @@ async def analyze(log: str, source: str | None = None) -> tuple[Analysis, int]:
 
     raw = reply.json().get("response", "")
     try:
-        return Analysis.model_validate(json.loads(raw)), latency_ms
+        analysis = Analysis.model_validate(json.loads(raw))
     except (json.JSONDecodeError, ValidationError) as exc:
         raise LLMBadOutput(f"{exc}\n--- model said ---\n{raw[:500]}") from exc
+
+    # The technique name comes from the catalogue, never from the model; an
+    # ID outside the catalogue is dropped rather than shown to an analyst.
+    tid, name = mitre.normalize(analysis.mitre.technique_id)
+    analysis.mitre.technique_id = tid
+    analysis.mitre.technique_name = name
+    return analysis, latency_ms
 
 
 async def ping() -> list[str]:

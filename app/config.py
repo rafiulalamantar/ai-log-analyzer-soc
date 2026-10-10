@@ -13,7 +13,7 @@ class Settings:
     ollama_model: str = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
     llm_timeout_seconds: float = float(os.getenv("LLM_TIMEOUT_SECONDS", "120"))
     max_log_chars: int = int(os.getenv("MAX_LOG_CHARS", "20000"))
-    prompt_version: str = os.getenv("PROMPT_VERSION", "analyze_v1")
+    prompt_version: str = os.getenv("PROMPT_VERSION", "analyze_v2")
 
     @property
     def prompt_path(self) -> Path:
