@@ -2,9 +2,13 @@
 import pytest
 from fastapi.testclient import TestClient
 
+import httpx
+
 from app import llm
 from app.main import app
 from app.models import Analysis
+
+from .helpers import fails_with, respond, transport_for
 
 client = TestClient(app)
 
@@ -66,3 +70,31 @@ def test_prompt_includes_log_and_source():
     assert "Failed password for root" in prompt
     assert "auth.log" in prompt
     assert "{log}" not in prompt
+
+
+# --- /healthz: the one route that always talks to Ollama --------------------
+
+def test_healthz_ready_when_model_is_pulled(monkeypatch):
+    transport_for(monkeypatch, respond({"models": [{"name": "llama3.1:8b"}]}))
+    body = client.get("/healthz").json()
+
+    assert body["status"] == "ready"
+    assert body["available_models"] == ["llama3.1:8b"]
+    assert body["prompt_version"] == "analyze_v2"
+
+
+def test_healthz_reports_model_missing_when_nothing_pulled(monkeypatch):
+    # Ollama is up but empty: a real state, and not the same as being down.
+    transport_for(monkeypatch, respond({"models": []}))
+    body = client.get("/healthz").json()
+
+    assert body["status"] == "model_missing"
+    assert body["available_models"] == []
+
+
+def test_healthz_returns_503_when_ollama_is_down(monkeypatch):
+    transport_for(monkeypatch, fails_with(httpx.ConnectError, "connection refused"))
+    response = client.get("/healthz")
+
+    assert response.status_code == 503
+    assert "unreachable" in response.json()["detail"]

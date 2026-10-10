@@ -16,7 +16,7 @@ See the project report (`1791647043721_AI.docx`) for the full design.
 | MITRE catalogue (constrains prompt, repairs output) | done |
 | Sample log corpus | 3 files + `labels.json` ground truth |
 | Prompt evaluation harness | done (`scripts/compare_prompts.py`) |
-| Test suite | 14 tests, runs without Ollama |
+| Test suite | 29 tests, runs without Ollama |
 | Deterministic pre-filter | not started (Phase 3) |
 | Streamlit dashboard | not started (Phase 4) |
 | Evaluation harness | not started (Phase 5) |
@@ -107,7 +107,25 @@ n8n and the evaluation harness all consume.
 .venv/bin/python -m pytest tests/ -q
 ```
 
-The LLM is stubbed, so the suite needs neither Ollama nor a network.
+29 tests, no Ollama and no network required — verify that claim with:
+
+```bash
+OLLAMA_HOST=http://localhost:9 .venv/bin/python -m pytest tests/ -q
+```
+
+Two layers of coverage:
+
+- The `/analyze` route tests replace `llm.analyze` outright, covering request
+  validation and the 503/502 error paths.
+- `tests/test_llm.py` drives the **real** `llm.analyze` through
+  `httpx.MockTransport` with recorded Ollama response bodies in
+  `tests/fixtures/`, so the parse -> validate -> `mitre.normalize` chain is
+  covered without a server. That includes the observed failure modes: prose
+  instead of JSON, a schema violation, an invented technique ID, and a
+  technique name the catalogue has to correct.
+
+What the suite does *not* measure is model accuracy — it never consults the
+model. That is what `scripts/compare_prompts.py` is for.
 
 ## Layout
 
@@ -126,7 +144,12 @@ data/samples/          log corpus + labels.json ground truth
 data/eval/             evaluation output
 scripts/compare_prompts.py   scores prompt versions against the labels
 scripts/smoke.sh       end-to-end check against a running API
-tests/test_api.py
+tests/
+  helpers.py           MockTransport plumbing shared by the test modules
+  fixtures/            recorded Ollama response bodies
+  test_api.py          routes, including /healthz
+  test_llm.py          the real Ollama call path
+  test_mitre.py        catalogue lookup and repair
 ```
 
 ## Evaluation

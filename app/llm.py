@@ -10,6 +10,16 @@ from .config import settings
 from .models import Analysis
 
 
+def _http_client(**kwargs) -> httpx.AsyncClient:
+    """Build the HTTP client used for Ollama calls.
+
+    Factored out as a seam: tests substitute an httpx.MockTransport here to
+    drive the real parse/validate/normalize chain with recorded Ollama
+    response bodies, with no server running.
+    """
+    return httpx.AsyncClient(**kwargs)
+
+
 class LLMUnavailable(RuntimeError):
     """Ollama could not be reached or did not answer in time."""
 
@@ -42,7 +52,7 @@ async def analyze(log: str, source: str | None = None) -> tuple[Analysis, int]:
 
     started = time.perf_counter()
     try:
-        async with httpx.AsyncClient(timeout=settings.llm_timeout_seconds) as client:
+        async with _http_client(timeout=settings.llm_timeout_seconds) as client:
             reply = await client.post(
                 f"{settings.ollama_host}/api/generate", json=payload
             )
@@ -72,7 +82,7 @@ async def analyze(log: str, source: str | None = None) -> tuple[Analysis, int]:
 async def ping() -> list[str]:
     """Names of the models Ollama currently has loaded. Raises if unreachable."""
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with _http_client(timeout=5.0) as client:
             reply = await client.get(f"{settings.ollama_host}/api/tags")
             reply.raise_for_status()
     except (httpx.HTTPError, httpx.TimeoutException) as exc:
