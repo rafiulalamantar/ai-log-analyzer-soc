@@ -37,6 +37,29 @@ class Indicators(BaseModel):
     files: list[str] = []
 
 
+class Signal(BaseModel):
+    """One deterministic rule hit. No model involved."""
+
+    rule_id: str
+    name: str
+    severity: Severity
+    technique_id: Optional[str] = None
+    detail: str
+    lines: list[str] = []
+
+
+class PrefilterReport(BaseModel):
+    """What the rule layer concluded before the model was consulted."""
+
+    events_parsed: int
+    signals: list[Signal] = []
+    severity_floor: Severity = Severity.info
+    clean: bool = True
+    applied_floor: bool = Field(
+        False, description="True if the rules raised the model's own assessment"
+    )
+
+
 class Analysis(BaseModel):
     """The structured verdict the model must return."""
 
@@ -64,6 +87,7 @@ class AnalyzeResponse(BaseModel):
     # Kept so the contract documented in the report (§4.1) still holds.
     response: str
     analysis: Analysis
+    prefilter: PrefilterReport
     model: str
     prompt_version: str
     latency_ms: int

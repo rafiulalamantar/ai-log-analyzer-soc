@@ -3,9 +3,9 @@ import logging
 
 from fastapi import FastAPI, HTTPException
 
-from . import llm
+from . import llm, prefilter
 from .config import settings
-from .models import AnalyzeRequest, AnalyzeResponse
+from .models import AnalyzeRequest, AnalyzeResponse, PrefilterReport
 
 log = logging.getLogger("soc")
 
@@ -40,9 +40,19 @@ async def healthz() -> dict:
     }
 
 
+@app.post("/prefilter", response_model=PrefilterReport)
+async def prefilter_only(request: AnalyzeRequest) -> PrefilterReport:
+    """Run the deterministic rules alone: no model, microseconds, no GPU.
+
+    Useful for triaging volume before deciding what deserves an LLM call.
+    """
+    return prefilter.run(request.log)
+
+
 @app.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
-    """Analyze raw log text and return a structured SOC assessment."""
+    """Analyze raw log text: deterministic rules first, then the model."""
+    report = prefilter.run(request.log)
     try:
         analysis, latency_ms = await llm.analyze(request.log, request.source)
     except llm.LLMUnavailable as exc:
@@ -53,9 +63,13 @@ async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
             status_code=502, detail="AI engine returned malformed analysis"
         ) from exc
 
+    # Rules override the model upward, never downward.
+    report.applied_floor = prefilter.apply_floor(analysis, report)
+
     return AnalyzeResponse(
         response=analysis.summary,
         analysis=analysis,
+        prefilter=report,
         model=settings.ollama_model,
         prompt_version=settings.prompt_version,
         latency_ms=latency_ms,

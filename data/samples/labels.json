@@ -2,7 +2,12 @@
   "auth_brute_force.log": {
     "verdict": "malicious",
     "severity": "critical",
-    "mitre_any_of": ["T1110", "T1110.001", "T1110.003", "T1078"],
+    "mitre_any_of": [
+      "T1110",
+      "T1110.001",
+      "T1110.003",
+      "T1078"
+    ],
     "note": "Four failed logins then a success from the same IP: the brute force worked."
   },
   "benign_noise.log": {
@@ -14,7 +19,35 @@
   "privilege_escalation.log": {
     "verdict": "malicious",
     "severity": "critical",
-    "mitre_any_of": ["T1059.004", "T1136.001", "T1548.003", "T1105"],
+    "mitre_any_of": [
+      "T1059.004",
+      "T1136.001",
+      "T1548.003",
+      "T1105"
+    ],
     "note": "www-data pipes a remote script to root via sudo, then a UID 0 account is created."
+  },
+  "log_tampering.log": {
+    "verdict": "malicious",
+    "severity": "high",
+    "mitre_any_of": [
+      "T1070.002"
+    ],
+    "note": "auth.log truncated, shell history cleared and wtmp removed: anti-forensics."
+  },
+  "password_spray.log": {
+    "verdict": "suspicious",
+    "severity": "medium",
+    "mitre_any_of": [
+      "T1110",
+      "T1110.003"
+    ],
+    "note": "Six distinct accounts tried from one external IP, none succeeded."
+  },
+  "user_typo.log": {
+    "verdict": "benign",
+    "severity": "info",
+    "mitre_any_of": [],
+    "note": "False-positive trap: two typos then a success from an internal host. Only two failures, below the brute-force threshold."
   }
 }

@@ -14,12 +14,11 @@ See the project report (`1791647043721_AI.docx`) for the full design.
 | Ollama / Llama 3.1 integration | done |
 | Structured JSON assessment (severity, MITRE, IOCs) | done |
 | MITRE catalogue (constrains prompt, repairs output) | done |
-| Sample log corpus | 3 files + `labels.json` ground truth |
-| Prompt evaluation harness | done (`scripts/compare_prompts.py`) |
-| Test suite | 29 tests, runs without Ollama |
-| Deterministic pre-filter | not started (Phase 3) |
+| Deterministic pre-filter (8 rules, severity floor) | done |
+| Sample log corpus | 6 files + `labels.json` ground truth |
+| Evaluation harness | done (`scripts/evaluate.py`) |
+| Test suite | 51 tests, runs without Ollama |
 | Streamlit dashboard | not started (Phase 4) |
-| Evaluation harness | not started (Phase 5) |
 | n8n workflow | not started (Phase 6) |
 
 ## Setup
@@ -136,13 +135,14 @@ app/
   models.py            request/response + Analysis schema
   config.py            environment-driven settings
   mitre.py             curated ATT&CK catalogue for log analysis
+  prefilter.py         deterministic rules + severity floor
   prompts/
     analyze_v1.txt     v1: plain instructions (kept for comparison)
     analyze_v2.txt     v2: escalation rules + few-shot (default)
 dashboard/             Streamlit UI (Phase 4)
 data/samples/          log corpus + labels.json ground truth
 data/eval/             evaluation output
-scripts/compare_prompts.py   scores prompt versions against the labels
+scripts/evaluate.py    scores rules / model / combined against the labels
 scripts/smoke.sh       end-to-end check against a running API
 tests/
   helpers.py           MockTransport plumbing shared by the test modules
@@ -150,34 +150,54 @@ tests/
   test_api.py          routes, including /healthz
   test_llm.py          the real Ollama call path
   test_mitre.py        catalogue lookup and repair
+  test_prefilter.py    every rule, both directions
 ```
 
 ## Evaluation
 
 ```bash
-.venv/bin/python scripts/compare_prompts.py analyze_v1 analyze_v2
+.venv/bin/python scripts/evaluate.py
 ```
 
-Scores each prompt version's verdict, severity and ATT&CK technique against
-`data/samples/labels.json` and writes `data/eval/prompt_comparison.md`.
+Scores four configurations against `data/samples/labels.json` (6 labelled
+samples x verdict, severity, technique = 18 fields) and writes
+`data/eval/results.md`. Measured on llama3.1:8b:
 
-Measured on llama3.1:8b:
+| configuration | verdict | severity | technique | total | mean latency |
+|---|---|---|---|---|---|
+| rules only | 6/6 | 6/6 | 6/6 | **18/18** | <1ms |
+| analyze_v1 | 3/6 | 3/6 | 3/6 | **9/18** | 20.1s |
+| analyze_v2 | 5/6 | 5/6 | 5/6 | **15/18** | 20.6s |
+| analyze_v2 + rules | 5/6 | 5/6 | 5/6 | **15/18** | 20.6s |
 
-| prompt | fields correct | mean latency |
-|---|---|---|
-| analyze_v1 | 3 / 9 | 18.1 s |
-| analyze_v2 | 9 / 9 | 20.2 s |
+Three findings worth reading before trusting any of this:
 
-v1 under-called both attacks as `suspicious/medium` and labelled each of them
-`T1210`. v2 adds explicit escalation rules (a success after repeated failures
-is a *successful* breach; `curl | sh` is RCE; a UID 0 account is critical),
-three worked examples, and a closed list of techniques to choose from.
+**The deterministic layer beats the model outright, by four orders of magnitude
+less compute.** That is not an argument for deleting the LLM — the rules only
+catch what they were taught, and 8 rules cannot cover a SOC. It *is* an argument
+for running them first and treating the model as the thing that handles what the
+rules do not recognise.
 
-**Caveat for anyone reading these numbers:** the corpus is three files and the
-v2 examples resemble them, so this measures that the escalation rules fire, not
-that the system generalises. A held-out set of logs the prompt was not written
-against is needed before the figure means anything. Latency is unchanged in
-practice — the larger prompt costs ~2 s.
+**v2's single failure is a false positive, not a miss.** It calls
+`user_typo.log` — two mistyped passwords then a success from an internal host —
+`malicious/critical`. The escalation rules that fixed v1's under-calling taught
+it "failures then success = breach" with no notion of a threshold, so it now
+over-reports. v1 got that sample right by being wrong everywhere else. Swapping
+a false negative for a false positive is not progress; an analyst who gets paged
+for typos stops reading the pages.
+
+**The severity floor adds nothing on this corpus**, because the floor only
+raises an assessment and the one defect needs lowering. It stays in because it
+protects against the v1 failure mode, which is the one that lets a real breach
+through — but the honest reading is that it is insurance, not an improvement.
+A ceiling (capping the model when no rule fired) would fix `user_typo.log`,
+at the cost of letting the rules veto a novel threat the model spotted. That
+trade is not obviously worth making.
+
+**Caveat on all of it:** six samples, written by the same person who wrote the
+rules and the prompt. The rules' 18/18 partly measures that the rules were
+written against these files. A held-out set is needed before any of these
+numbers belong in a report as an accuracy claim.
 
 ## Notes
 

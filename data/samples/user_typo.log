@@ -1,0 +1,4 @@
+Oct  9 08:44:02 web01 sshd[1510]: Failed password for deploy from 10.0.3.14 port 43110 ssh2
+Oct  9 08:44:09 web01 sshd[1510]: Failed password for deploy from 10.0.3.14 port 43110 ssh2
+Oct  9 08:44:15 web01 sshd[1510]: Accepted password for deploy from 10.0.3.14 port 43110 ssh2
+Oct  9 08:44:15 web01 sshd[1510]: pam_unix(sshd:session): session opened for user deploy by (uid=0)
