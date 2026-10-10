@@ -1,0 +1,4 @@
+Oct  9 09:15:02 web01 CRON[1820]: pam_unix(cron:session): session opened for user root by (uid=0)
+Oct  9 09:15:02 web01 CRON[1820]: pam_unix(cron:session): session closed for user root
+Oct  9 09:17:44 web01 systemd[1]: Started Daily apt download activities.
+Oct  9 09:20:01 web01 sshd[1902]: Accepted publickey for deploy from 10.0.3.14 port 44210 ssh2

@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.pytest_cache/
+data/runs/
+
+# Project report kept out of the public repo
+*.docx

@@ -1,0 +1,6 @@
+# Floors chosen for Python 3.14 wheel availability.
+fastapi>=0.119
+uvicorn[standard]>=0.38
+httpx>=0.28
+pydantic>=2.12
+pytest>=8.4
