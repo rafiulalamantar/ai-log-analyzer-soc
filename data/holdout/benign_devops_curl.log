@@ -1,0 +1,2 @@
+Oct  9 10:12:41 build01 sudo:  deploy : TTY=pts/0 ; PWD=/opt/build ; USER=root ; COMMAND=/usr/bin/curl -fsSL -o /tmp/node.tar.xz https://nodejs.org/dist/v22.9.0/node-v22.9.0-linux-x64.tar.xz
+Oct  9 10:12:58 build01 sudo:  deploy : TTY=pts/0 ; PWD=/opt/build ; USER=root ; COMMAND=/bin/tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1

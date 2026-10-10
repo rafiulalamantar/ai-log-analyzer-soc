@@ -1,0 +1,4 @@
+Oct  9 22:03:11 web03 sudo:  deploy : TTY=pts/1 ; PWD=/root ; USER=root ; COMMAND=/usr/sbin/setenforce 0
+Oct  9 22:03:18 web03 systemd[1]: Stopping Security Auditing Service...
+Oct  9 22:03:19 web03 systemd[1]: Stopped Security Auditing Service.
+Oct  9 22:03:25 web03 systemd[1]: Stopped Uncomplicated firewall.

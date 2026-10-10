@@ -1,0 +1,5 @@
+Oct  9 02:11:04 mail01 dovecot: imap-login: Disconnected (auth failed, 1 attempts): user=<sales@corp.local>, rip=45.83.91.12, lip=10.0.0.5
+Oct  9 02:11:19 mail01 dovecot: imap-login: Disconnected (auth failed, 1 attempts): user=<sales@corp.local>, rip=45.83.91.12, lip=10.0.0.5
+Oct  9 02:11:33 mail01 dovecot: imap-login: Disconnected (auth failed, 1 attempts): user=<sales@corp.local>, rip=45.83.91.12, lip=10.0.0.5
+Oct  9 02:11:48 mail01 dovecot: imap-login: Disconnected (auth failed, 1 attempts): user=<sales@corp.local>, rip=45.83.91.12, lip=10.0.0.5
+Oct  9 02:12:02 mail01 dovecot: imap-login: Login: user=<sales@corp.local>, method=PLAIN, rip=45.83.91.12, lip=10.0.0.5, mpid=8841

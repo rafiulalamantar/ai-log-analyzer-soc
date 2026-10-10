@@ -1,0 +1,5 @@
+Oct  9 06:15:44 app02 systemd[1]: Started kworkerd.service.
+Oct  9 06:15:46 app02 kworkerd[8812]: * ABOUT        XMRig/6.21.0 gcc/11.4.0
+Oct  9 06:15:46 app02 kworkerd[8812]: * POOL #1      pool.supportxmr.com:443 algo rx/0
+Oct  9 06:15:47 app02 kworkerd[8812]: use profile  rx  (4 threads) scratchpad 2048 KB
+Oct  9 06:16:02 app02 kernel: CPU0: Package temperature above threshold, cpu clock throttled

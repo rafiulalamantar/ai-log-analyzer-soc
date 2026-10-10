@@ -1,0 +1,2 @@
+Oct  9 08:02:14 web01 su: pam_unix(su:auth): authentication failure; logname=deploy uid=1000 euid=0 tty=pts/0 ruser=deploy rhost=  user=root
+Oct  9 08:02:22 web01 su: pam_unix(su:session): session opened for user root by deploy(uid=1000)

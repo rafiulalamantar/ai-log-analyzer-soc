@@ -1,0 +1,2 @@
+Oct  9 21:50:12 web01 sudo:  deploy : TTY=pts/2 ; PWD=/root ; USER=root ; COMMAND=/bin/journalctl --vacuum-time=1s
+Oct  9 21:50:20 web01 sudo:  deploy : TTY=pts/2 ; PWD=/root ; USER=root ; COMMAND=/bin/sh -c "> /var/log/syslog"

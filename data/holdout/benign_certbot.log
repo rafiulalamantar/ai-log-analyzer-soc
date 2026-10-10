@@ -1,0 +1,3 @@
+Oct  9 03:12:02 web01 certbot[5510]: Renewing an existing certificate for corp.local and 2 more domains
+Oct  9 03:12:09 web01 certbot[5510]: Successfully received certificate.
+Oct  9 03:12:09 web01 systemd[1]: Reloading nginx configuration.

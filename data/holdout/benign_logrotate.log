@@ -1,0 +1,5 @@
+Oct  9 00:00:02 web01 logrotate[1201]: rotating pattern: /var/log/nginx/*.log  after 1 days (14 rotations)
+Oct  9 00:00:02 web01 logrotate[1201]: rotating log /var/log/nginx/access.log, log->rotateCount is 14
+Oct  9 00:00:02 web01 logrotate[1201]: renaming /var/log/nginx/access.log to /var/log/nginx/access.log.1
+Oct  9 00:00:03 web01 logrotate[1201]: running postrotate script
+Oct  9 00:00:03 web01 nginx[920]: signal process started

@@ -1,0 +1,4 @@
+Oct  9 12:40:02 dns01 named[901]: client 10.0.2.51#51222: query: mfzwizlthiqdcnbxgq2dknrxha4tsmjs.exfil.badactor.net IN TXT + (10.0.0.53)
+Oct  9 12:40:04 dns01 named[901]: client 10.0.2.51#51223: query: nvqwi2lomvzhg33nmuxgg33nebwwc43u.exfil.badactor.net IN TXT + (10.0.0.53)
+Oct  9 12:40:06 dns01 named[901]: client 10.0.2.51#51224: query: pfsxizlsmv4hi33qnbsxeylunfxw4ir2.exfil.badactor.net IN TXT + (10.0.0.53)
+Oct  9 12:40:08 dns01 named[901]: client 10.0.2.51#51225: query: ozqwy3dpo5xxe3denbsxg43foqxgg2dn.exfil.badactor.net IN TXT + (10.0.0.53)

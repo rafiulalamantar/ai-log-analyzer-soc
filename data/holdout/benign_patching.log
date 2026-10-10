@@ -1,0 +1,4 @@
+Oct  9 06:25:11 web01 unattended-upgrade[2210]: Packages that will be upgraded: libssl3 openssl curl
+Oct  9 06:25:44 web01 dpkg[2240]: status installed libssl3:amd64 3.0.13-0ubuntu3.4
+Oct  9 06:25:51 web01 unattended-upgrade[2210]: All upgrades installed
+Oct  9 06:26:02 web01 systemd[1]: Started Daily apt upgrade and clean activities.

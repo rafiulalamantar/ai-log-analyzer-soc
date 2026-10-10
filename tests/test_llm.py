@@ -142,3 +142,55 @@ def test_ping_on_dead_server_raises_unavailable(monkeypatch):
     transport_for(monkeypatch, fails_with(httpx.ConnectError, "nothing listening"))
     with pytest.raises(llm.LLMUnavailable):
         run(llm.ping())
+
+
+# --- structured-log coercion ------------------------------------------------
+
+def test_json_log_lines_are_coerced_not_rejected(monkeypatch):
+    """A JSON-sourced log must not fail validation over quoting style.
+
+    Asked to quote lines from CloudTrail verbatim, llama3.1:8b returns them as
+    objects. The assessment is correct; only the container type is wrong.
+    """
+    inner = {
+        "verdict": "malicious", "severity": "critical", "attack_type": "IAM abuse",
+        "confidence": 0.9, "mitre": {"technique_id": "T1078.004", "technique_name": "x"},
+        "indicators": {"ips": ["91.219.236.18"], "users": ["svc-deploy"]},
+        "summary": "s", "recommendations": ["r"],
+        "supporting_lines": [
+            {"eventName": "ConsoleLogin", "sourceIPAddress": "91.219.236.18"},
+            {"eventName": "StopLogging"},
+        ],
+    }
+    transport_for(monkeypatch, respond({"model": "m", "response": json.dumps(inner), "done": True}))
+    analysis, _ = run(llm.analyze("{}", "cloudtrail.log"))
+
+    assert len(analysis.supporting_lines) == 2
+    assert all(isinstance(line, str) for line in analysis.supporting_lines)
+    assert "ConsoleLogin" in analysis.supporting_lines[0]
+    assert analysis.severity.value == "critical"
+
+
+def test_structured_indicators_are_coerced_too(monkeypatch):
+    inner = {
+        "verdict": "suspicious", "severity": "medium", "attack_type": "x", "confidence": 0.5,
+        "mitre": {"technique_id": None, "technique_name": None},
+        "indicators": {"ips": [{"addr": "1.2.3.4"}], "users": ["u"]},
+        "summary": "s",
+    }
+    transport_for(monkeypatch, respond({"model": "m", "response": json.dumps(inner), "done": True}))
+    analysis, _ = run(llm.analyze("x", None))
+
+    assert analysis.indicators.ips == ['{"addr":"1.2.3.4"}']
+
+
+def test_plain_string_lines_pass_through_untouched(monkeypatch):
+    inner = {
+        "verdict": "benign", "severity": "info", "attack_type": "none", "confidence": 1.0,
+        "mitre": {"technique_id": None, "technique_name": None},
+        "indicators": {}, "summary": "s", "supporting_lines": ["Oct  9 systemd[1]: Started."],
+    }
+    transport_for(monkeypatch, respond({"model": "m", "response": json.dumps(inner), "done": True}))
+    analysis, _ = run(llm.analyze("x", None))
+
+    assert analysis.supporting_lines == ["Oct  9 systemd[1]: Started."]

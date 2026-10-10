@@ -1,0 +1,3 @@
+Oct  9 11:20:41 db01 useradd[3310]: new user: name=monitor2, UID=0, GID=0, home=/home/monitor2, shell=/bin/bash
+Oct  9 11:20:44 db01 passwd[3315]: password for 'monitor2' changed by 'root'
+Oct  9 11:20:52 db01 sshd[3340]: Accepted password for monitor2 from 194.26.29.84 port 55120 ssh2
