@@ -8,13 +8,15 @@
       "T1110.003",
       "T1078"
     ],
-    "note": "Four failed logins then a success from the same IP: the brute force worked."
+    "note": "Four failed logins then a success from the same IP: the brute force worked.",
+    "in_rule_scope": true
   },
   "benign_noise.log": {
     "verdict": "benign",
     "severity": "info",
     "mitre_any_of": [],
-    "note": "Cron sessions, a timer unit and a key-based login from an internal host."
+    "note": "Cron sessions, a timer unit and a key-based login from an internal host.",
+    "in_rule_scope": true
   },
   "privilege_escalation.log": {
     "verdict": "malicious",
@@ -25,7 +27,8 @@
       "T1548.003",
       "T1105"
     ],
-    "note": "www-data pipes a remote script to root via sudo, then a UID 0 account is created."
+    "note": "www-data pipes a remote script to root via sudo, then a UID 0 account is created.",
+    "in_rule_scope": true
   },
   "log_tampering.log": {
     "verdict": "malicious",
@@ -33,7 +36,8 @@
     "mitre_any_of": [
       "T1070.002"
     ],
-    "note": "auth.log truncated, shell history cleared and wtmp removed: anti-forensics."
+    "note": "auth.log truncated, shell history cleared and wtmp removed: anti-forensics.",
+    "in_rule_scope": true
   },
   "password_spray.log": {
     "verdict": "suspicious",
@@ -42,12 +46,14 @@
       "T1110",
       "T1110.003"
     ],
-    "note": "Six distinct accounts tried from one external IP, none succeeded."
+    "note": "Six distinct accounts tried from one external IP, none succeeded.",
+    "in_rule_scope": true
   },
   "user_typo.log": {
     "verdict": "benign",
     "severity": "info",
     "mitre_any_of": [],
-    "note": "False-positive trap: two typos then a success from an internal host. Only two failures, below the brute-force threshold."
+    "note": "False-positive trap: two typos then a success from an internal host. Only two failures, below the brute-force threshold.",
+    "in_rule_scope": true
   }
 }

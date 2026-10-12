@@ -69,6 +69,37 @@ def test_distinct_accounts_from_one_source_is_spraying():
     assert signal.technique_id == "T1110.003"
 
 
+def dovecot_fail(attempts=1, ip="45.83.91.12", user="sales@corp.local"):
+    return (f"Oct  9 02:11:04 mail01 dovecot: imap-login: Disconnected (auth failed, {attempts} attempts): "
+            f"user=<{user}>, rip={ip}, lip=10.0.0.5")
+
+
+DOVECOT_LOGIN = ("Oct  9 02:12:02 mail01 dovecot: imap-login: Login: user=<sales@corp.local>, "
+                 "method=PLAIN, rip=45.83.91.12, lip=10.0.0.5, mpid=8841")
+
+
+def test_dovecot_failures_then_login_is_a_successful_brute_force():
+    # The same behaviour as BRUTE in Dovecot's wording; R001 used to miss it.
+    log = "\n".join([dovecot_fail()] * 4 + [DOVECOT_LOGIN])
+    signal = next(s for s in prefilter.run(log).signals if s.rule_id == "R001")
+    assert "45.83.91.12" in signal.detail and "sales@corp.local" in signal.detail
+
+
+def test_dovecot_source_is_rip_not_the_servers_own_lip():
+    # lip= is the mail server itself; correlating on it would merge every client.
+    log = "\n".join([dovecot_fail(ip=f"203.0.113.{i}") for i in range(3)] + [DOVECOT_LOGIN])
+    assert "R001" not in fired(log)
+
+
+def test_dovecot_attempt_count_on_one_line_is_honoured():
+    # "auth failed, 3 attempts" on a single disconnect is three failures.
+    assert "R001" in fired(dovecot_fail(attempts=3) + "\n" + DOVECOT_LOGIN)
+
+
+def test_dovecot_one_mistyped_password_is_below_threshold():
+    assert fired(dovecot_fail() + "\n" + DOVECOT_LOGIN) == set()
+
+
 # --- R004-R008: content rules ---------------------------------------------
 
 def test_pipe_to_shell_variants_all_match():

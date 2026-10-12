@@ -1,0 +1,5 @@
+2026-10-09 03:14:22 WIN-DC01 Microsoft-Windows-Security-Auditing EventID=4625 An account failed to log on. Account Name: administrator  Logon Type: 3  Source Network Address: 203.0.113.44  Failure Reason: Unknown user name or bad password
+2026-10-09 03:14:26 WIN-DC01 Microsoft-Windows-Security-Auditing EventID=4625 An account failed to log on. Account Name: administrator  Logon Type: 3  Source Network Address: 203.0.113.44  Failure Reason: Unknown user name or bad password
+2026-10-09 03:14:31 WIN-DC01 Microsoft-Windows-Security-Auditing EventID=4625 An account failed to log on. Account Name: svc_sql  Logon Type: 3  Source Network Address: 203.0.113.44  Failure Reason: Unknown user name or bad password
+2026-10-09 03:14:39 WIN-DC01 Microsoft-Windows-Security-Auditing EventID=4624 An account was successfully logged on. Account Name: svc_sql  Logon Type: 3  Source Network Address: 203.0.113.44
+2026-10-09 03:14:52 WIN-DC01 Microsoft-Windows-Security-Auditing EventID=4672 Special privileges assigned to new logon. Account Name: svc_sql  Privileges: SeDebugPrivilege SeTcbPrivilege

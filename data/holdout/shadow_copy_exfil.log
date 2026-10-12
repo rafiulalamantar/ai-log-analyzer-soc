@@ -1,0 +1,3 @@
+Oct  9 05:33:02 web02 sudo:  deploy : TTY=pts/0 ; PWD=/home/deploy ; USER=root ; COMMAND=/bin/cp /etc/shadow /tmp/.cache/s
+Oct  9 05:33:40 web02 sshd[6612]: subsystem request for sftp by user deploy
+Oct  9 05:33:41 web02 internal-sftp[6613]: open "/tmp/.cache/s" flags READ mode 0666

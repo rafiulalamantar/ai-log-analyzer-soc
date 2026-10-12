@@ -1,0 +1,5 @@
+{"eventTime":"2026-10-09T04:12:03Z","eventSource":"signin.amazonaws.com","eventName":"ConsoleLogin","sourceIPAddress":"91.219.236.18","userIdentity":{"type":"IAMUser","userName":"svc-deploy"},"responseElements":{"ConsoleLogin":"Failure"}}
+{"eventTime":"2026-10-09T04:12:41Z","eventSource":"signin.amazonaws.com","eventName":"ConsoleLogin","sourceIPAddress":"91.219.236.18","userIdentity":{"type":"IAMUser","userName":"svc-deploy"},"responseElements":{"ConsoleLogin":"Success"},"additionalEventData":{"MFAUsed":"No"}}
+{"eventTime":"2026-10-09T04:13:10Z","eventSource":"iam.amazonaws.com","eventName":"CreateUser","sourceIPAddress":"91.219.236.18","requestParameters":{"userName":"support-ops"}}
+{"eventTime":"2026-10-09T04:13:22Z","eventSource":"iam.amazonaws.com","eventName":"AttachUserPolicy","sourceIPAddress":"91.219.236.18","requestParameters":{"userName":"support-ops","policyArn":"arn:aws:iam::aws:policy/AdministratorAccess"}}
+{"eventTime":"2026-10-09T04:14:02Z","eventSource":"cloudtrail.amazonaws.com","eventName":"StopLogging","sourceIPAddress":"91.219.236.18","requestParameters":{"name":"org-trail"}}

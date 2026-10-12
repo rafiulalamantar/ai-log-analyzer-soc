@@ -1,0 +1,262 @@
+{
+  "imap_brute_success.log": {
+    "verdict": "malicious",
+    "severity": "critical",
+    "mitre_any_of": [
+      "T1110",
+      "T1110.001",
+      "T1078"
+    ],
+    "in_rule_scope": true,
+    "note": "Dovecot IMAP: four auth failures then a login from the same IP. Same attack class as the dev corpus, different service wording."
+  },
+  "sudo_wget_shell.log": {
+    "verdict": "malicious",
+    "severity": "critical",
+    "mitre_any_of": [
+      "T1059.004",
+      "T1105"
+    ],
+    "in_rule_scope": true,
+    "note": "wget piped to bash under sudo by the jenkins service account."
+  },
+  "adduser_root_group.log": {
+    "verdict": "malicious",
+    "severity": "critical",
+    "mitre_any_of": [
+      "T1136.001",
+      "T1078"
+    ],
+    "in_rule_scope": true,
+    "note": "UID 0 account created, password set, then logged into from an external IP."
+  },
+  "shadow_copy_exfil.log": {
+    "verdict": "malicious",
+    "severity": "critical",
+    "mitre_any_of": [
+      "T1003.008",
+      "T1048",
+      "T1041"
+    ],
+    "in_rule_scope": true,
+    "note": "/etc/shadow copied to a dotfile directory and pulled over sftp."
+  },
+  "audit_log_wipe.log": {
+    "verdict": "malicious",
+    "severity": "high",
+    "mitre_any_of": [
+      "T1070.002"
+    ],
+    "in_rule_scope": true,
+    "note": "journal vacuumed and syslog truncated: anti-forensics."
+  },
+  "nginx_sqli.log": {
+    "verdict": "malicious",
+    "severity": "high",
+    "mitre_any_of": [
+      "T1190",
+      "T1083"
+    ],
+    "in_rule_scope": false,
+    "note": "sqlmap UNION SELECT against a query parameter, returning 200. Web access log, no auth events."
+  },
+  "webshell_upload.log": {
+    "verdict": "malicious",
+    "severity": "critical",
+    "mitre_any_of": [
+      "T1505.003",
+      "T1190",
+      "T1059.004"
+    ],
+    "in_rule_scope": false,
+    "note": "PHP dropped in an uploads directory, then invoked with ?cmd= to read /etc/passwd."
+  },
+  "path_traversal.log": {
+    "verdict": "suspicious",
+    "severity": "medium",
+    "mitre_any_of": [
+      "T1083",
+      "T1190"
+    ],
+    "in_rule_scope": false,
+    "note": "Traversal attempts in several encodings, all 404: an attempt that did not land."
+  },
+  "reverse_shell.log": {
+    "verdict": "malicious",
+    "severity": "critical",
+    "mitre_any_of": [
+      "T1059.004",
+      "T1071.001"
+    ],
+    "in_rule_scope": false,
+    "note": "www-data gets an interactive root bash and an outbound connection to port 4444."
+  },
+  "cron_persistence.log": {
+    "verdict": "malicious",
+    "severity": "high",
+    "mitre_any_of": [
+      "T1053.003"
+    ],
+    "in_rule_scope": false,
+    "note": "crontab replaced, then a hidden /tmp binary runs every five minutes. No pipe-to-shell to match on."
+  },
+  "authorized_keys_backdoor.log": {
+    "verdict": "malicious",
+    "severity": "high",
+    "mitre_any_of": [
+      "T1098.004",
+      "T1098"
+    ],
+    "in_rule_scope": false,
+    "note": "An attacker public key appended to authorized_keys for persistent access."
+  },
+  "defenses_disabled.log": {
+    "verdict": "malicious",
+    "severity": "high",
+    "mitre_any_of": [
+      "T1562.001"
+    ],
+    "in_rule_scope": false,
+    "note": "SELinux set permissive, auditd and the firewall stopped."
+  },
+  "windows_failed_logons.log": {
+    "verdict": "malicious",
+    "severity": "critical",
+    "mitre_any_of": [
+      "T1110",
+      "T1110.003",
+      "T1078"
+    ],
+    "in_rule_scope": false,
+    "note": "Windows 4625 failures across two accounts, then 4624 success and 4672 privileged logon. Entirely different log format."
+  },
+  "cloudtrail_iam_abuse.log": {
+    "verdict": "malicious",
+    "severity": "critical",
+    "mitre_any_of": [
+      "T1078.004",
+      "T1136.003",
+      "T1098.001",
+      "T1562.008"
+    ],
+    "in_rule_scope": false,
+    "note": "AWS: failed then successful console login without MFA, admin user created, then CloudTrail logging stopped. JSON, not syslog."
+  },
+  "port_scan.log": {
+    "verdict": "suspicious",
+    "severity": "medium",
+    "mitre_any_of": [
+      "T1046",
+      "T1595"
+    ],
+    "in_rule_scope": false,
+    "note": "Six ports swept from one source, all blocked by the firewall."
+  },
+  "dns_tunnel.log": {
+    "verdict": "malicious",
+    "severity": "high",
+    "mitre_any_of": [
+      "T1071.004",
+      "T1572",
+      "T1048"
+    ],
+    "in_rule_scope": false,
+    "note": "Long base32 labels queried as TXT against one domain: data over DNS."
+  },
+  "cryptominer.log": {
+    "verdict": "malicious",
+    "severity": "high",
+    "mitre_any_of": [
+      "T1496"
+    ],
+    "in_rule_scope": false,
+    "note": "XMRig masquerading as kworkerd, connected to a mining pool, CPU throttling."
+  },
+  "docker_socket_escape.log": {
+    "verdict": "malicious",
+    "severity": "critical",
+    "mitre_any_of": [
+      "T1611",
+      "T1610"
+    ],
+    "in_rule_scope": false,
+    "note": "docker.sock mounted into a container with / bind-mounted and chroot: host escape."
+  },
+  "benign_logrotate.log": {
+    "verdict": "benign",
+    "severity": "info",
+    "mitre_any_of": [],
+    "in_rule_scope": true,
+    "note": "Trap for R006: many /var/log paths, renaming not destruction."
+  },
+  "benign_devops_curl.log": {
+    "verdict": "benign",
+    "severity": "info",
+    "mitre_any_of": [],
+    "in_rule_scope": true,
+    "note": "Trap for R004: curl writes to a file; no pipe into a shell."
+  },
+  "benign_failed_su.log": {
+    "verdict": "benign",
+    "severity": "info",
+    "mitre_any_of": [],
+    "in_rule_scope": true,
+    "note": "Trap for R001/R002: one failure then success, below the threshold."
+  },
+  "benign_service_account.log": {
+    "verdict": "benign",
+    "severity": "info",
+    "mitre_any_of": [],
+    "in_rule_scope": true,
+    "note": "Trap for R008: www-data appears, but never invokes sudo."
+  },
+  "benign_new_employee.log": {
+    "verdict": "benign",
+    "severity": "info",
+    "mitre_any_of": [],
+    "in_rule_scope": true,
+    "note": "Trap for R005: account creation with an ordinary UID, added to a normal group."
+  },
+  "benign_patching.log": {
+    "verdict": "benign",
+    "severity": "info",
+    "mitre_any_of": [],
+    "in_rule_scope": false,
+    "note": "Unattended security upgrades."
+  },
+  "benign_backup.log": {
+    "verdict": "benign",
+    "severity": "info",
+    "mitre_any_of": [],
+    "in_rule_scope": false,
+    "note": "4 GB leaving the host, to an internal NAS on a schedule: volume alone is not exfiltration."
+  },
+  "benign_certbot.log": {
+    "verdict": "benign",
+    "severity": "info",
+    "mitre_any_of": [],
+    "in_rule_scope": false,
+    "note": "Certificate renewal and an nginx reload."
+  },
+  "benign_monitoring.log": {
+    "verdict": "benign",
+    "severity": "info",
+    "mitre_any_of": [],
+    "in_rule_scope": false,
+    "note": "Prometheus scraping /healthz and /metrics."
+  },
+  "benign_crawler_404s.log": {
+    "verdict": "benign",
+    "severity": "info",
+    "mitre_any_of": [],
+    "in_rule_scope": false,
+    "note": "Googlebot hitting retired URLs: a 404 sweep that is not an attack."
+  },
+  "benign_docker_deploy.log": {
+    "verdict": "benign",
+    "severity": "info",
+    "mitre_any_of": [],
+    "in_rule_scope": false,
+    "note": "Ordinary image pull and container start."
+  }
+}

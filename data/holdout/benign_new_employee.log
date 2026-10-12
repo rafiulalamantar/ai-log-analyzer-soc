@@ -1,0 +1,4 @@
+Oct  9 14:02:11 ldap01 useradd[7210]: new group: name=rhasan, GID=1842
+Oct  9 14:02:11 ldap01 useradd[7210]: new user: name=rhasan, UID=1842, GID=1842, home=/home/rhasan, shell=/bin/bash
+Oct  9 14:02:14 ldap01 usermod[7215]: add 'rhasan' to group 'developers'
+Oct  9 14:05:33 ldap01 sshd[7280]: Accepted publickey for rhasan from 10.0.3.88 port 49112 ssh2

@@ -1,0 +1,4 @@
+Oct  9 02:00:01 db01 CRON[3301]: (root) CMD (/usr/local/bin/pg_backup.sh)
+Oct  9 02:04:18 db01 rsync[3340]: sent 4,221,887,002 bytes  received 42 bytes  18,221,004.00 bytes/sec
+Oct  9 02:04:18 db01 rsync[3340]: total size is 4,220,118,441  speedup is 1.00
+Oct  9 02:04:19 db01 pg_backup[3302]: backup written to nas01.internal:/backups/db01/2026-10-09.tar.zst

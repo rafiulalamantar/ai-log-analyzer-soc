@@ -4,10 +4,27 @@ The LLM is instructed to emit `Analysis` as JSON; validating it here is what
 turns a prose answer into data the dashboard, n8n and the eval harness can all
 consume.
 """
+import json
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _as_lines(value):
+    """Coerce list items back to strings.
+
+    Asked to quote lines verbatim from a JSON log (CloudTrail, Zeek, any
+    structured source), the model returns them as objects rather than strings.
+    Rejecting that discards an otherwise correct assessment over formatting, so
+    re-serialize instead.
+    """
+    if not isinstance(value, list):
+        return value
+    return [
+        item if isinstance(item, str) else json.dumps(item, separators=(",", ":"))
+        for item in value
+    ]
 
 
 class Severity(str, Enum):
@@ -35,6 +52,10 @@ class Indicators(BaseModel):
     hosts: list[str] = []
     processes: list[str] = []
     files: list[str] = []
+
+    _coerce = field_validator("ips", "users", "hosts", "processes", "files", mode="before")(
+        _as_lines
+    )
 
 
 class Signal(BaseModel):
@@ -74,6 +95,8 @@ class Analysis(BaseModel):
     supporting_lines: list[str] = Field(
         default=[], description="Verbatim log lines that justify the verdict"
     )
+
+    _coerce_lines = field_validator("supporting_lines", mode="before")(_as_lines)
 
 
 class AnalyzeRequest(BaseModel):

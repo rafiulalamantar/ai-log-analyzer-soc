@@ -1,0 +1,3 @@
+Oct  9 16:00:12 k8s-node1 dockerd[1120]: pulling image registry.corp.local/api:v2.14.3
+Oct  9 16:00:48 k8s-node1 kubelet[1180]: Created container api in pod api-7d9f8-xk2lp
+Oct  9 16:00:49 k8s-node1 kubelet[1180]: Started container api

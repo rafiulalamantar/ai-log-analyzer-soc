@@ -35,6 +35,23 @@ CATALOG: dict[str, str] = {
     "T1041": "Exfiltration Over C2 Channel",
     "T1071.001": "Application Layer Protocol: Web Protocols",
     "T1496": "Resource Hijacking",
+    # Added when the corpus grew to cover web, cloud, Windows and container
+    # logs: without these, normalize() would drop correct answers.
+    "T1505.003": "Server Software Component: Web Shell",
+    "T1098.004": "Account Manipulation: SSH Authorized Keys",
+    "T1083": "File and Directory Discovery",
+    "T1071.004": "Application Layer Protocol: DNS",
+    "T1572": "Protocol Tunneling",
+    "T1048": "Exfiltration Over Alternative Protocol",
+    "T1078.004": "Valid Accounts: Cloud Accounts",
+    "T1136.003": "Create Account: Cloud Account",
+    "T1098.001": "Account Manipulation: Additional Cloud Credentials",
+    "T1562.008": "Impair Defenses: Disable or Modify Cloud Logs",
+    "T1610": "Deploy Container",
+    "T1611": "Escape to Host",
+    "T1134": "Access Token Manipulation",
+    "T1543.003": "Create or Modify System Process: Windows Service",
+    "T1053.005": "Scheduled Task/Job: Scheduled Task",
 }
 
 
