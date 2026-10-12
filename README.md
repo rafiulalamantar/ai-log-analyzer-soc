@@ -18,9 +18,9 @@ See the project report (`1791647043721_AI.docx`) for the full design.
 | Deterministic pre-filter (8 rules, severity floor) | done |
 | Log corpus | 6 dev + 29 held-out samples, labelled |
 | Evaluation harness | done (`scripts/evaluate.py`) |
-| Test suite | 97 tests, runs without Ollama |
+| Test suite | 107 tests, runs without Ollama |
 | Streamlit dashboard | done |
-| n8n workflow | not started (Phase 6) |
+| n8n triage workflow | done |
 
 ## Setup
 
@@ -130,13 +130,50 @@ exactly what any other client gets. `tests/test_dashboard.py` routes those calls
 into the in-process API (model stubbed), so a mismatch between the API's
 response shape and what the dashboard reads fails the suite.
 
+## Automation (n8n)
+
+`n8n/soc_triage.json` turns the API into an alerting pipeline. Each log posted
+to its webhook goes through it like this:
+
+```
+webhook ─► Prepare ─┬─► /prefilter ─► high/critical? ─► rule alert ─────────┐
+                    │                                                        ├─► alerts.jsonl
+                    └─► /analyze ─► incident record ─┬─► high/critical? ─► model alert
+                          │                          ├─► incidents.jsonl
+                          │ (fails)                  └─► reply to caller
+                          └─► error record ─► incidents.jsonl, reply 502
+```
+
+**Every log goes to the model, not only the ones the rules flag.** On the
+held-out set the rules catch a third of the attacks, so screening with them
+would hide two-thirds from the model. The rules are a fast path instead: a high
+or critical hit is written to `alerts.jsonl` within milliseconds, while the
+model takes about 15 seconds to produce its own record.
+
+Setup: n8n 2.x needs Node 24, and its `isolated-vm` dependency does not build on
+Node 25. On this machine it is installed with the official Node 24 build in
+`~/.local/opt/node24`, n8n in `~/.local/share/n8n`, and a wrapper at
+`~/.local/bin/n8n`. Elsewhere, `npm install -g n8n` under Node 24 does the same.
+
+```bash
+.venv/bin/uvicorn app.main:app            # terminal 1: the API
+n8n/start.sh                              # terminal 2: imports, publishes, starts n8n
+.venv/bin/python scripts/ship_logs.py data/holdout/*.log   # terminal 3
+```
+
+`start.sh` re-imports the workflow on every start, so edits made in the n8n
+editor (http://localhost:5678) are overwritten. To keep them, export them to
+`n8n/soc_triage.json` first. n8n may only read and write under `data/incidents/`
+(`N8N_RESTRICT_FILE_ACCESS_TO`). The webhook replies once the model has
+finished, which is what paces the shipper.
+
 ## Test
 
 ```bash
 .venv/bin/python -m pytest tests/ -q
 ```
 
-97 tests, no Ollama and no network required — verify that claim with:
+107 tests, no Ollama and no network required — verify that claim with:
 
 ```bash
 OLLAMA_HOST=http://localhost:9 .venv/bin/python -m pytest tests/ -q
@@ -178,6 +215,10 @@ data/holdout/          held-out corpus, 29 labelled samples
 data/eval/             evaluation output, per dataset
 scripts/evaluate.py    scores rules / model / combined against the labels
 scripts/smoke.sh       end-to-end check against a running API
+scripts/ship_logs.py   sends log files to the n8n workflow (stands in for a collector)
+n8n/
+  soc_triage.json      the triage workflow
+  start.sh             imports, publishes and starts it
 tests/
   helpers.py           MockTransport plumbing shared by the test modules
   fixtures/            recorded Ollama response bodies
@@ -187,6 +228,7 @@ tests/
   test_prefilter.py    every rule, both directions
   test_corpus.py       label integrity: unscoreable labels fail the build
   test_dashboard.py    dashboard client and AppTest runs against the in-process API
+  test_n8n.py          workflow wiring, and API fields it reads vs the response models
 ```
 
 ## Evaluation

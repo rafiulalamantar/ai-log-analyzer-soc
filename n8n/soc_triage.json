@@ -1,0 +1,479 @@
+{
+  "id": "socTriage0000001",
+  "name": "SOC log triage",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "soc-triage",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "bc0dc129-296f-54c4-8c96-cf12a20c215a",
+      "name": "Log received",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "0a249b11-a54c-53cc-ae00-68d8f4656192"
+    },
+    {
+      "parameters": {
+        "jsCode": "// The API this workflow drives. 127.0.0.1, not localhost: Node resolves\n// localhost to ::1 first, and uvicorn listens on IPv4 only by default.\nconst API = 'http://127.0.0.1:8000';\n\nreturn $input.all().map((item, i) => {\n  const body = item.json.body ?? {};\n  if (typeof body.log !== 'string' || !body.log.trim()) {\n    throw new Error('Request body must contain a non-empty \"log\" string');\n  }\n  return {\n    json: {\n      api: API,\n      log: body.log,\n      source: body.source ?? null,\n      received_at: new Date().toISOString(),\n    },\n    pairedItem: i,\n  };\n});"
+      },
+      "id": "af160362-b9c7-5db1-8a30-3d22f90918f4",
+      "name": "Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.api }}/prefilter",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ log: $json.log }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "5b59244e-ff75-5b27-92bf-689c143b0d9c",
+      "name": "Rules (prefilter)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        140
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "277f5890-870d-5844-af78-e533d6ed645e",
+              "leftValue": "={{ $json.severity_floor }}",
+              "rightValue": "high",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "8993905b-3d15-558f-8aca-483ef8c1c2fb",
+              "leftValue": "={{ $json.severity_floor }}",
+              "rightValue": "critical",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "11bd1734-64f3-5e77-b53a-ecf24a654a5d",
+      "name": "Rules rate it high or critical?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Fast path: the rules answer in under a millisecond, so this alert is raised\n// before the ~15 s model analysis finishes. The model's view follows separately.\nconst req = $('Prepare').item.json;\nconst signals = $json.signals;\nconst alert = {\n  kind: 'alert',\n  stage: 'rules',\n  at: new Date().toISOString(),\n  source: req.source,\n  severity: $json.severity_floor,\n  rules: signals.map(s => `${s.rule_id} ${s.name}`),\n  technique_ids: [...new Set(signals.map(s => s.technique_id).filter(Boolean))],\n  evidence: signals.flatMap(s => s.lines),\n};\nreturn { json: { line: JSON.stringify(alert) + '\\n' } };"
+      },
+      "id": "4d702f68-e663-54f9-a891-ca67ee861e78",
+      "name": "Rule alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.api }}/analyze",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ log: $json.log, source: $json.source }) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "07b1a2f2-d96b-51c6-aec6-825f74345ad6",
+      "name": "Full analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        460
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Every analysed log becomes one incident record. High and critical results\n// are also routed to the alert file; anything else not benign is queued for review.\nconst req = $('Prepare').item.json;\nconst a = $json.analysis;\nconst p = $json.prefilter;\nconst route = ['high', 'critical'].includes(a.severity) ? 'alert'\n  : a.verdict === 'benign' ? 'none' : 'review';\nconst record = {\n  kind: 'incident',\n  at: new Date().toISOString(),\n  received_at: req.received_at,\n  source: req.source,\n  route,\n  verdict: a.verdict,\n  severity: a.severity,\n  confidence: a.confidence,\n  attack_type: a.attack_type,\n  technique_id: a.mitre.technique_id,\n  technique_name: a.mitre.technique_name,\n  indicators: a.indicators,\n  summary: a.summary,\n  recommendations: a.recommendations,\n  rule_signals: p.signals.map(s => s.rule_id),\n  rules_raised_severity: p.applied_floor,\n  model: $json.model,\n  prompt_version: $json.prompt_version,\n  latency_ms: $json.latency_ms,\n};\nreturn { json: { route, record, line: JSON.stringify(record) + '\\n' } };"
+      },
+      "id": "08283741-9f8f-5e29-bd76-a69ee7cc316b",
+      "name": "Incident record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// /analyze failed (Ollama down, or the model's output failed validation).\n// Recorded rather than dropped, so a gap in coverage is visible.\nconst req = $('Prepare').item.json;\nconst record = {\n  kind: 'error',\n  at: new Date().toISOString(),\n  received_at: req.received_at,\n  source: req.source,\n  route: 'error',\n  error: $json.error?.message ?? JSON.stringify($json.error ?? $json),\n};\nreturn { json: { route: 'error', record, line: JSON.stringify(record) + '\\n' } };"
+      },
+      "id": "bfe83ea0-9b5d-5847-9454-608429e8ef9f",
+      "name": "Analysis failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ route: $json.route, verdict: $json.record.verdict, severity: $json.record.severity, technique_id: $json.record.technique_id, attack_type: $json.record.attack_type, latency_ms: $json.record.latency_ms }) }}",
+        "options": {}
+      },
+      "id": "a8b1650b-ceea-5b66-b60c-3ccaf5217fa3",
+      "name": "Reply with triage",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ route: 'error', error: $json.record.error }) }}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "eb33bda6-17c8-5694-a2c8-12d7c0889e02",
+      "name": "Reply with error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        880,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "line",
+        "options": {
+          "fileName": "incidents.jsonl"
+        }
+      },
+      "id": "c207868c-b5d3-57dd-ba37-dba0957336bb",
+      "name": "Incident to text",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "data/incidents/incidents.jsonl",
+        "dataPropertyName": "data",
+        "options": {
+          "append": true
+        }
+      },
+      "id": "975b3211-4334-55ed-ba24-fe3dbd96c62d",
+      "name": "Append to incidents.jsonl",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "81effcd4-caa4-5afb-83f0-59ebb2fc3252",
+              "leftValue": "={{ $json.route }}",
+              "rightValue": "alert",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1f952f95-54da-5117-b0d4-0d9192436af2",
+      "name": "Needs an alert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const r = $json.record;\nconst alert = {\n  kind: 'alert',\n  stage: 'model',\n  at: r.at,\n  source: r.source,\n  severity: r.severity,\n  verdict: r.verdict,\n  attack_type: r.attack_type,\n  technique_ids: r.technique_id ? [r.technique_id] : [],\n  summary: r.summary,\n  recommendations: r.recommendations,\n  rules_raised_severity: r.rules_raised_severity,\n};\nreturn { json: { line: JSON.stringify(alert) + '\\n' } };"
+      },
+      "id": "2013d643-aa64-5d6c-ad0d-7f8cd6f66567",
+      "name": "Model alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "line",
+        "options": {
+          "fileName": "alerts.jsonl"
+        }
+      },
+      "id": "f576a8a6-5957-5a3e-b56c-ed903d88c438",
+      "name": "Alert to text",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "data/incidents/alerts.jsonl",
+        "dataPropertyName": "data",
+        "options": {
+          "append": true
+        }
+      },
+      "id": "320888a3-01db-5666-ad3c-f02e05d361b5",
+      "name": "Append to alerts.jsonl",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1540,
+        140
+      ]
+    }
+  ],
+  "connections": {
+    "Log received": {
+      "main": [
+        [
+          {
+            "node": "Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare": {
+      "main": [
+        [
+          {
+            "node": "Rules (prefilter)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Full analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rules (prefilter)": {
+      "main": [
+        [
+          {
+            "node": "Rules rate it high or critical?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rules rate it high or critical?": {
+      "main": [
+        [
+          {
+            "node": "Rule alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Rule alert": {
+      "main": [
+        [
+          {
+            "node": "Alert to text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Full analysis": {
+      "main": [
+        [
+          {
+            "node": "Incident record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Analysis failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Incident record": {
+      "main": [
+        [
+          {
+            "node": "Reply with triage",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Incident to text",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Needs an alert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analysis failed": {
+      "main": [
+        [
+          {
+            "node": "Reply with error",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Incident to text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Incident to text": {
+      "main": [
+        [
+          {
+            "node": "Append to incidents.jsonl",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs an alert?": {
+      "main": [
+        [
+          {
+            "node": "Model alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Model alert": {
+      "main": [
+        [
+          {
+            "node": "Alert to text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert to text": {
+      "main": [
+        [
+          {
+            "node": "Append to alerts.jsonl",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}
