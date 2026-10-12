@@ -3,7 +3,8 @@
 Local-first SOC log analysis: raw log text in, a structured threat assessment out.
 Inference runs on your own machine via Ollama, so log data never leaves the host.
 
-Implements Phases 1–2 of the build plan (FastAPI + Ollama core, structured output).
+Implements Phases 1–3 of the build plan (FastAPI + Ollama core, structured output,
+deterministic pre-filter) and the Phase 5 evaluation harness.
 See the project report (`1791647043721_AI.docx`) for the full design.
 
 ## Status
@@ -17,7 +18,7 @@ See the project report (`1791647043721_AI.docx`) for the full design.
 | Deterministic pre-filter (8 rules, severity floor) | done |
 | Log corpus | 6 dev + 29 held-out samples, labelled |
 | Evaluation harness | done (`scripts/evaluate.py`) |
-| Test suite | 75 tests, runs without Ollama |
+| Test suite | 82 tests, runs without Ollama |
 | Streamlit dashboard | not started (Phase 4) |
 | n8n workflow | not started (Phase 6) |
 
@@ -139,6 +140,7 @@ app/
   prompts/
     analyze_v1.txt     v1: plain instructions (kept for comparison)
     analyze_v2.txt     v2: escalation rules + few-shot (default)
+    analyze_v3.txt     v3: v2 plus a failure threshold; measured worse, kept as evidence
 dashboard/             Streamlit UI (Phase 4)
 data/samples/          dev corpus (detector written against these)
 data/holdout/          held-out corpus, 29 labelled samples
@@ -150,7 +152,7 @@ tests/
   fixtures/            recorded Ollama response bodies
   test_api.py          routes, including /healthz
   test_llm.py          the real Ollama call path
-  test_mitre.py        catalogue lookup and repair
+  test_mitre.py        catalogue lookup and repair; prompt examples vs the rules
   test_prefilter.py    every rule, both directions
   test_corpus.py       label integrity: unscoreable labels fail the build
 ```
@@ -168,7 +170,7 @@ something different from a score on logs you did not:
 ```bash
 .venv/bin/python scripts/evaluate.py                                    # dev set
 .venv/bin/python scripts/evaluate.py --dataset holdout --versions ""    # rules only, instant
-.venv/bin/python scripts/evaluate.py --dataset holdout --versions analyze_v2
+.venv/bin/python scripts/evaluate.py --dataset holdout --versions analyze_v2,analyze_v3
 ```
 
 Precision and recall below are over attack-vs-benign — the decision an analyst
@@ -179,17 +181,25 @@ acts on. FP counts benign samples reported as an attack.
 | configuration | fields | precision | recall | FP | mean latency |
 |---|---|---|---|---|---|
 | rules | 18/18 | 1.00 | 1.00 | 0 | <1ms |
-| analyze_v1 | 9/18 | 1.00 | 1.00 | 0 | 19.4s |
-| analyze_v2 | 15/18 | 0.80 | 1.00 | 1 | 20.6s |
-| analyze_v2 + rules | 15/18 | 0.80 | 1.00 | 1 | 20.6s |
+| analyze_v1 | 9/18 | 1.00 | 1.00 | 0 | 14.5s |
+| analyze_v2 | 15/18 | 0.80 | 1.00 | 1 | 15.0s |
+| analyze_v3 | 12/18 | 0.80 | 1.00 | 1 | 15.8s |
+| analyze_v3 + rules | 12/18 | 0.80 | 1.00 | 1 | 15.8s |
 
 **Held-out set** (29 samples):
 
 | configuration | fields | precision | recall | FP | mean latency |
 |---|---|---|---|---|---|
-| rules | 45/87 | 1.00 | 0.28 | 0 | <1ms |
-| analyze_v2 | 64/87 | 0.93 | 0.78 | 1 | 20.5s |
-| analyze_v2 + rules | 64/87 | 0.93 | 0.78 | 1 | 20.5s |
+| rules | 48/87 | 1.00 | 0.33 | 0 | <1ms |
+| analyze_v2 | 62/87 | 0.93 | 0.78 | 1 | 14.8s |
+| analyze_v3 | 57/87 | 0.87 | 0.72 | 2 | 15.1s |
+| analyze_v3 + rules | 60/87 | 0.88 | 0.78 | 2 | 15.1s |
+
+All rows come from one run (12 Oct 2026). That run scored `+rules` only for
+the last prompt version, so there is no `analyze_v2 + rules` row; the harness
+now scores it for every version. Run-to-run variation is real: the same v2
+prompt scored 64/87 on the held-out set in the previous run (10 Oct) and 62/87
+in this one, at temperature 0.1. Differences of two or three fields are noise.
 
 ### What the held-out set showed
 
@@ -206,8 +216,10 @@ recall 0.28 on files they were not. Any evaluation run only against
 
 **The rules are a strict subset of the model.** Every attack the rules caught,
 `analyze_v2` also caught: union recall is 0.78, identical to the model alone.
-On unseen data the rule layer adds no detection coverage whatsoever. It still
-earns its place for cost (sub-millisecond versus 20 seconds), for precision
+That held in both runs, including after the Dovecot fix (every attack the rules
+flag in the 12 Oct run, v2 flagged too). Against `analyze_v2`, the rule layer
+adds no detection coverage on unseen data. It still
+earns its place for cost (sub-millisecond versus ~15 seconds), for precision
 (1.00 with zero false positives, against the model's 0.93), and because a rule
 hit is auditable in a way a model verdict is not — but "rules catch what the
 model misses" is not supported by this corpus, and the earlier dev-set claim
@@ -223,15 +235,22 @@ you know the context (a hidden path under `/tmp`, a miner named `kworkerd`).
 fails authentication once or twice and then succeeds. Escalation rule 1 taught
 the model "failures then success = breach" with no threshold, while the rules
 layer uses a threshold of 3. Two independent samples with the same cause makes
-this systematic, not noise, and it is the strongest argument for an
-`analyze_v3` that teaches the prompt the same threshold the rules use.
+this systematic, not noise. The likely root cause was in the prompt itself: v2's
+own worked example graded *two* failures then a success as critical, while R001
+needs three. `test_v3_worked_examples_agree_with_the_rule_layer` now runs every
+example in the prompt through the rules and fails on any disagreement; v2 fails
+it. What happened when the prompt was fixed is below.
 
 **The rule layer has a brittleness defect, separate from its coverage gaps.**
 `imap_brute_success.log` is the same attack as the dev corpus — repeated
 failures then a success from one address — and R001 misses it because Dovecot
 writes `auth failed ... rip=` where OpenSSH writes `Failed password for ... from`.
 A rule that covers one vendor's phrasing while appearing to cover the behaviour
-is worse than no rule, because the tests stay green.
+is worse than no rule, because the tests stay green. R001–R003 now read Dovecot's
+format too, correlating on the client address (`rip=`, not the server's own
+`lip=`) and counting `auth failed, 4 attempts` as four failures. Rules-only
+held-out recall moved 0.28 → 0.33, still with no false positives. That sample is
+no longer held out for the rules: it is the one they were fixed against.
 
 **The corpus also found a bug in this code, not the model.** Asked to quote
 lines verbatim from CloudTrail, the model returns `supporting_lines` as JSON
@@ -240,6 +259,38 @@ discarding an assessment that was correct (`malicious/critical`, correct IPs and
 users). `app/models.py` now re-serializes non-string list items instead of
 rejecting them. No structured-log source would have survived the previous
 behaviour.
+
+### analyze_v3: a targeted prompt fix that measured worse
+
+v3 is v2 with the brute-force rule given the rules' threshold (three or more
+failures then a success is a breach; one or two is a mistyped password, benign)
+and the worked examples corrected to match. It was written against two
+held-out failures, so for v3 `benign_failed_su.log` and
+`imap_brute_success.log` are no longer held out.
+
+It did what it was aimed at on one sample and made everything around it worse:
+
+- **Fixed:** `benign_failed_su.log` (holdout) is now benign/info.
+- **Not fixed:** `user_typo.log` (dev) is still malicious/critical — with a
+  near-identical benign example sitting in the prompt.
+- **New false positives:** `benign_devops_curl.log` and
+  `benign_new_employee.log`, both benign under v2, are now malicious/critical.
+- **New miss:** `imap_brute_success.log` — four failures then a login — is now
+  called *benign*. The "one or two failures is a typo" clause swallowed a real
+  breach. Only the rules catch it, so for v3 the rule layer is no longer a
+  subset of the model: v3+rules recall is 0.78 against v3's 0.72.
+- **Severity inflation:** `password_spray.log` (six failures, no success)
+  went from suspicious/medium to malicious/critical; `log_tampering.log`,
+  `nginx_sqli.log` and `authorized_keys_backdoor.log` went from high to
+  critical.
+
+Net: held-out fields 62 → 57, precision 0.93 → 0.87, recall 0.78 → 0.72; dev
+fields 15 → 12. The shift is larger than the run-to-run noise above, and in one
+direction. The reading that fits is that the 8B model does not apply a numeric
+threshold as a condition; the emphasised "THREE OR MORE failed attempts"
+raised its alarm level in general rather than drawing a line. Thresholds belong
+in code, which is an argument for the rules layer even where it adds no
+coverage. `analyze_v2` remains the default; v3 stays on disk as evidence.
 
 ### Still not an accuracy claim
 
@@ -260,5 +311,7 @@ these figures defensible.
   but does not enforce our schema; `app/llm.py` validates against `Analysis` and
   returns HTTP 502 on a mismatch rather than passing junk downstream.
 - First request after startup is slow (model load). Subsequent ones are faster.
-- Every log line currently reaches the model. That is fine for a demo and will
-  not hold at volume — Phase 3's pre-filter is what fixes it.
+- Every log line still reaches the model: the pre-filter scores the log and sets
+  a severity floor, but does not yet skip the model call for clean input. On
+  the held-out set the rules catch a third of attacks, so gating on them would
+  drop the rest; that trade-off needs real volume data before it is made.

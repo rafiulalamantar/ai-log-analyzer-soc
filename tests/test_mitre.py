@@ -1,5 +1,14 @@
 """The catalogue layer: constrain the prompt, repair the output."""
-from app import llm, mitre
+import dataclasses
+import json
+import re
+
+import pytest
+
+from app import llm, mitre, prefilter
+from app.config import PROMPT_DIR, settings
+
+PROMPT_VERSIONS = sorted(p.stem for p in PROMPT_DIR.glob("analyze_v*.txt"))
 
 
 def test_known_id_keeps_catalogue_name():
@@ -35,7 +44,30 @@ def test_catalogue_is_injected_into_the_prompt():
     assert "{mitre_catalog}" not in prompt
 
 
-def test_prompt_has_no_unsubstituted_placeholders():
+@pytest.mark.parametrize("version", PROMPT_VERSIONS)
+def test_prompt_has_no_unsubstituted_placeholders(monkeypatch, version):
+    monkeypatch.setattr(llm, "settings", dataclasses.replace(settings, prompt_version=version))
     prompt = llm.build_prompt("some log", None)
     for placeholder in ("{log}", "{source}", "{mitre_catalog}"):
         assert placeholder not in prompt
+
+
+def worked_examples(version: str) -> list[tuple[str, dict]]:
+    text = (PROMPT_DIR / f"{version}.txt").read_text()
+    pairs = re.findall(r"Input:\n(.*?)\nOutput:\n(\{.*?\})\n", text, re.S)
+    return [(log, json.loads(out)) for log, out in pairs]
+
+
+def test_v3_worked_examples_agree_with_the_rule_layer():
+    # analyze_v2 fails this: its brute-force example graded two failures then a
+    # success as critical, while R001 needs three. The model learned the example,
+    # and paged on mistyped passwords in both datasets. Prompt and rules must
+    # teach the same threshold.
+    examples = worked_examples("analyze_v3")
+    assert len(examples) >= 4
+    for log, out in examples:
+        report = prefilter.run(log)
+        if out["verdict"] == "benign":
+            assert report.clean, log
+        if out["mitre"]["technique_id"] == "T1110":
+            assert "R001" in {s.rule_id for s in report.signals}, log

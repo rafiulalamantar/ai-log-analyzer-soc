@@ -40,6 +40,14 @@ IPV4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 
 FAILED_AUTH = re.compile(r"Failed (?:password|publickey) for (?:invalid user )?(?P<user>[\w\-.$]+)", re.I)
 ACCEPTED_AUTH = re.compile(r"Accepted (?:password|publickey) for (?P<user>[\w\-.$]+)", re.I)
+# Dovecot (IMAP/POP3) says the same thing in different words, and puts the
+# client address in rip= with the server's own address in lip= beside it, so
+# "first IP on the line" is not safe. One disconnect line can carry several
+# attempts: "auth failed, 4 attempts" is four failures, not one.
+DOVECOT_FAILED = re.compile(r"\(auth failed, (?P<attempts>\d+) attempts?\b", re.I)
+DOVECOT_LOGIN = re.compile(r"-login: Login: ", re.I)
+DOVECOT_USER = re.compile(r"\buser=<(?P<user>[^>]*)>")
+DOVECOT_RIP = re.compile(r"\brip=(?P<ip>(?:\d{1,3}\.){3}\d{1,3})\b")
 PIPE_TO_SHELL = re.compile(r"(?:curl|wget|fetch)\s[^|;]*\|\s*(?:sudo\s+)?(?:ba|z|da|k)?sh\b", re.I)
 ROOT_ACCOUNT = re.compile(r"new user:.*\b(?:UID|GID)=0\b", re.I)
 LOG_TAMPER = re.compile(
@@ -92,25 +100,46 @@ def parse(log: str) -> list[Event]:
     return events
 
 
+def _auth_outcome(event: Event) -> tuple[str, str, str, int] | None:
+    """Classify one line as ("fail" | "ok", source, user, attempts), or None."""
+    if (m := DOVECOT_FAILED.search(event.message)) and (rip := DOVECOT_RIP.search(event.message)):
+        user = DOVECOT_USER.search(event.message)
+        return "fail", rip.group("ip"), user.group("user") if user else "", int(m.group("attempts"))
+    if DOVECOT_LOGIN.search(event.message) and (rip := DOVECOT_RIP.search(event.message)):
+        user = DOVECOT_USER.search(event.message)
+        return "ok", rip.group("ip"), user.group("user") if user else "", 1
+    source = event.ips[0] if event.ips else None
+    if not source:
+        return None
+    if (failed := FAILED_AUTH.search(event.message)):
+        return "fail", source, failed.group("user"), 1
+    if (ok := ACCEPTED_AUTH.search(event.message)):
+        return "ok", source, ok.group("user"), 1
+    return None
+
+
 def _auth_signals(events: list[Event]) -> list[Signal]:
     """Correlate failures and successes per source address."""
     failures: dict[str, list[Event]] = {}
+    attempts: dict[str, int] = {}
     users: dict[str, set[str]] = {}
     successes: dict[str, list[tuple[Event, str]]] = {}
 
     for event in events:
-        source = event.ips[0] if event.ips else None
-        if not source:
+        outcome = _auth_outcome(event)
+        if outcome is None:
             continue
-        if (failed := FAILED_AUTH.search(event.message)):
+        kind, source, user, n = outcome
+        if kind == "fail":
             failures.setdefault(source, []).append(event)
-            users.setdefault(source, set()).add(failed.group("user"))
-        elif (ok := ACCEPTED_AUTH.search(event.message)):
-            successes.setdefault(source, []).append((event, ok.group("user")))
+            attempts[source] = attempts.get(source, 0) + n
+            users.setdefault(source, set()).add(user)
+        else:
+            successes.setdefault(source, []).append((event, user))
 
     signals = []
     for source, failed_events in sorted(failures.items()):
-        count = len(failed_events)
+        count = attempts[source]
         hit = successes.get(source)
 
         if hit and count >= FAILURES_BEFORE_SUCCESS:

@@ -9,8 +9,8 @@ Two datasets:
                     specific rules
 
 Configurations: `rules` (deterministic only), each prompt version (model only),
-and `<version>+rules` (model with the deterministic floor applied, which is
-what /analyze does). The combined row costs no extra inference.
+and `<version>+rules` for each version (model with the deterministic floor
+applied, which is what /analyze does). Combined rows cost no extra inference.
 
 Usage:
     .venv/bin/python scripts/evaluate.py                       # dev set, v1 + v2
@@ -186,14 +186,12 @@ async def main() -> None:
     all_rows = {"rules": rows_for(None, data, labels)}
     print(f"scored rules over {len(labels)} samples (no model)", flush=True)
 
-    runs = {}
     for version in versions:
         print(f"running {version} ...", flush=True)
-        runs[version] = await run_model(version, data, labels)
-        all_rows[version] = rows_for(runs[version], data, labels)
-    if versions:
-        last = versions[-1]
-        all_rows[f"{last}+rules"] = rows_for(combine(runs[last], data), data, labels)
+        runs = await run_model(version, data, labels)
+        all_rows[version] = rows_for(runs, data, labels)
+        # Free: the floor reuses the model's output, so every version gets one.
+        all_rows[f"{version}+rules"] = rows_for(combine(runs, data), data, labels)
 
     report = render(args.dataset, all_rows, labels)
     out = Path("data/eval") / f"results_{args.dataset}.md"
