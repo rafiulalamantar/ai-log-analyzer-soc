@@ -18,8 +18,8 @@ See the project report (`1791647043721_AI.docx`) for the full design.
 | Deterministic pre-filter (8 rules, severity floor) | done |
 | Log corpus | 6 dev + 29 held-out samples, labelled |
 | Evaluation harness | done (`scripts/evaluate.py`) |
-| Test suite | 82 tests, runs without Ollama |
-| Streamlit dashboard | not started (Phase 4) |
+| Test suite | 97 tests, runs without Ollama |
+| Streamlit dashboard | done |
 | n8n workflow | not started (Phase 6) |
 
 ## Setup
@@ -101,13 +101,42 @@ Response shape:
 report (§4.1) still holds; `analysis` is the structured form that the dashboard,
 n8n and the evaluation harness all consume.
 
+## Dashboard
+
+With the API running (see **Run**), in a second terminal:
+
+```bash
+.venv/bin/streamlit run dashboard/app.py
+```
+
+Opens at http://localhost:8501. Point it at another API with `SOC_API=http://host:8000`.
+
+- **Input:** pick any dev or held-out corpus sample, upload a file, or paste lines.
+- **Rules only** calls `/prefilter`: under a millisecond, no model. When no rule
+  fires it says so rather than calling the log benign, since 8 narrow rules
+  cannot vouch for a log.
+- **Full analysis** calls `/analyze` (~15–30s): verdict, severity, MITRE link,
+  evidence lines, indicators, recommendations, and the rule signals beside them.
+  A banner shows when the rules raised the model's severity.
+- **Against the label:** for corpus samples, the result is scored the same way
+  `scripts/evaluate.py` scores it. On `samples/` that is agreement with the dev
+  set the detector was written against, not accuracy; the page says so.
+
+The sidebar shows engine state from `/healthz`; with Ollama down, rules-only
+still works and full analysis is disabled.
+
+The dashboard calls the API over HTTP rather than importing `app`, so it shows
+exactly what any other client gets. `tests/test_dashboard.py` routes those calls
+into the in-process API (model stubbed), so a mismatch between the API's
+response shape and what the dashboard reads fails the suite.
+
 ## Test
 
 ```bash
 .venv/bin/python -m pytest tests/ -q
 ```
 
-29 tests, no Ollama and no network required — verify that claim with:
+97 tests, no Ollama and no network required — verify that claim with:
 
 ```bash
 OLLAMA_HOST=http://localhost:9 .venv/bin/python -m pytest tests/ -q
@@ -125,7 +154,7 @@ Two layers of coverage:
   technique name the catalogue has to correct.
 
 What the suite does *not* measure is model accuracy — it never consults the
-model. That is what `scripts/compare_prompts.py` is for.
+model. That is what `scripts/evaluate.py` is for.
 
 ## Layout
 
@@ -141,7 +170,9 @@ app/
     analyze_v1.txt     v1: plain instructions (kept for comparison)
     analyze_v2.txt     v2: escalation rules + few-shot (default)
     analyze_v3.txt     v3: v2 plus a failure threshold; measured worse, kept as evidence
-dashboard/             Streamlit UI (Phase 4)
+dashboard/
+  app.py               Streamlit UI; talks to the API over HTTP
+  client.py            API calls, corpus, label scoring (no Streamlit)
 data/samples/          dev corpus (detector written against these)
 data/holdout/          held-out corpus, 29 labelled samples
 data/eval/             evaluation output, per dataset
@@ -155,6 +186,7 @@ tests/
   test_mitre.py        catalogue lookup and repair; prompt examples vs the rules
   test_prefilter.py    every rule, both directions
   test_corpus.py       label integrity: unscoreable labels fail the build
+  test_dashboard.py    dashboard client and AppTest runs against the in-process API
 ```
 
 ## Evaluation
