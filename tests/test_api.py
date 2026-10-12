@@ -33,7 +33,7 @@ def test_root_matches_documented_contract():
 
 def test_analyze_returns_structured_assessment(monkeypatch):
     async def fake(log, source=None):
-        return STUB, 1234
+        return STUB.model_copy(deep=True), 1234
 
     monkeypatch.setattr(llm, "analyze", fake)
     body = client.post("/analyze", json={"log": "Failed password for admin"}).json()
@@ -122,7 +122,7 @@ def test_prefilter_route_reports_clean_benign_logs():
 
 def test_analyze_includes_the_prefilter_report(monkeypatch):
     async def fake(log, source=None):
-        return STUB, 100
+        return STUB.model_copy(deep=True), 100
 
     monkeypatch.setattr(llm, "analyze", fake)
     log = "Oct  9 16:40:13 db02 useradd[7721]: new user: name=svc, UID=0, GID=0, home=/home/svc"

@@ -152,7 +152,9 @@ if mode == "rules":
     technique = worst["technique_id"] if worst else None
     verdict = client.VERDICT_FOR_FLOOR[floor]
     c1, c2 = st.columns(2)
-    c1.metric("Verdict (rules)", f"{client.VERDICT_ICON[verdict]} {verdict}")
+    # Silence from 8 narrow rules is not a benign verdict, whatever evaluate.py scores it as.
+    c1.metric("Verdict (rules)", "— no rule fired" if report["clean"]
+              else f"{client.VERDICT_ICON[verdict]} {verdict}")
     with c2:
         st.caption("Severity floor")
         badge(floor)
@@ -178,7 +180,8 @@ if report.get("applied_floor"):
 
 main, side = st.columns([3, 2])
 with main:
-    st.subheader(a["attack_type"])
+    no_attack = a["attack_type"].strip().lower() in ("", "none", "n/a", "benign")
+    st.subheader("No attack identified" if no_attack else a["attack_type"])
     tid = a["mitre"]["technique_id"]
     if tid:
         st.markdown(f"**MITRE ATT&CK** [{tid} · {a['mitre']['technique_name']}]({client.attack_url(tid)})")

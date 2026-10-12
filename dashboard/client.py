@@ -18,6 +18,8 @@ DEFAULT_API = os.getenv("SOC_API", "http://localhost:8000")
 # model, which can take a minute on its own.
 ANALYZE_TIMEOUT = 180.0
 
+# Mirrors app.prefilter.SEVERITY_ORDER; restated so the dashboard needs no app import.
+SEVERITY_ORDER = {"info": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
 SEVERITY_COLOR = {
     "info": "gray",
     "low": "blue",
