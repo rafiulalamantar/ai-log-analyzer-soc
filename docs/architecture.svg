@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 624" width="1000" height="624" role="img" aria-label="System architecture: three clients call one FastAPI backend, which runs the rules, then a local Llama 3.1 model through Ollama">
+  <title>System architecture</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#8c959f"/>
+    </marker>
+    <marker id="arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#0969da"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+      .title { font-size: 20px; font-weight: 600; }
+      .sub { font-size: 13px; fill: #59636e; }
+      .name { font-size: 14px; font-weight: 600; }
+      .line { font-size: 12px; fill: #59636e; }
+      .note { font-size: 11.5px; fill: #59636e; }
+      .num { font-size: 12px; font-weight: 600; fill: #ffffff; }
+      .box { fill: #ffffff; stroke: #d0d7de; stroke-width: 1.25; }
+      .step { fill: #f6f8fa; stroke: #d0d7de; stroke-width: 1.25; }
+      .edge { fill: none; stroke: #8c959f; stroke-width: 1.5; }
+    </style>
+  </defs>
+
+  <rect width="1000" height="624" fill="#ffffff"/>
+
+  <text class="title" x="24" y="38">System architecture</text>
+  <text class="sub" x="24" y="62">Three clients share one API. The rules run first, then a local Llama 3.1 model; the rules can raise the model's verdict but never lower it.</text>
+
+  <!-- Local machine boundary -->
+  <rect x="16" y="82" width="968" height="524" rx="12" fill="none" stroke="#0969da" stroke-width="1.25" stroke-dasharray="6 5"/>
+  <text class="note" x="32" y="102" style="fill:#0969da;font-weight:600">One machine: no log leaves the host</text>
+
+  <!-- Clients -->
+  <g>
+    <rect class="box" x="40" y="126" width="230" height="84" rx="8"/>
+    <text class="name" x="56" y="152">Streamlit dashboard</text>
+    <text class="line" x="56" y="172">Analyst UI · port 8501</text>
+    <text class="line" x="56" y="190">pick, upload or paste a log</text>
+  </g>
+  <g>
+    <rect class="box" x="40" y="236" width="230" height="84" rx="8"/>
+    <text class="name" x="56" y="262">Command-line scripts</text>
+    <text class="line" x="56" y="282">smoke.sh · ship_logs.py</text>
+    <text class="line" x="56" y="300">send log files over HTTP</text>
+  </g>
+  <g>
+    <rect class="box" x="40" y="346" width="230" height="84" rx="8"/>
+    <text class="name" x="56" y="372">n8n workflow</text>
+    <text class="line" x="56" y="392">Webhook · port 5678</text>
+    <text class="line" x="56" y="410">rules fast path + full analysis</text>
+  </g>
+  <g>
+    <rect class="box" x="40" y="466" width="230" height="84" rx="8"/>
+    <text class="name" x="56" y="492">Incident files</text>
+    <text class="line" x="56" y="512">incidents.jsonl · every log</text>
+    <text class="line" x="56" y="530">alerts.jsonl · high and critical</text>
+  </g>
+
+  <!-- Client to API connectors -->
+  <path class="edge" d="M270 168H322" marker-end="url(#arrow)"/>
+  <path class="edge" d="M270 278H322" marker-end="url(#arrow)"/>
+  <path class="edge" d="M270 388H322" marker-end="url(#arrow)"/>
+  <path class="edge" d="M155 430V464" marker-end="url(#arrow)"/>
+
+  <!-- FastAPI container -->
+  <rect class="box" x="324" y="112" width="400" height="452" rx="10"/>
+  <text class="name" x="344" y="140">FastAPI backend · port 8000</text>
+  <text class="line" x="344" y="160">GET /healthz · POST /prefilter · POST /analyze</text>
+
+  <!-- Pipeline steps -->
+  <g>
+    <rect class="step" x="344" y="178" width="360" height="56" rx="8"/>
+    <circle cx="368" cy="206" r="11" fill="#57606a"/><text class="num" x="368" y="210" text-anchor="middle">1</text>
+    <text class="name" x="390" y="201">Rule layer</text>
+    <text class="line" x="390" y="220">8 deterministic rules · severity floor · under 1 ms</text>
+  </g>
+  <g>
+    <rect class="step" x="344" y="252" width="360" height="56" rx="8"/>
+    <circle cx="368" cy="280" r="11" fill="#57606a"/><text class="num" x="368" y="284" text-anchor="middle">2</text>
+    <text class="name" x="390" y="275">Build the prompt</text>
+    <text class="line" x="390" y="294">analyze_v2 prompt + 24-technique ATT&amp;CK list</text>
+  </g>
+  <g>
+    <rect x="344" y="326" width="360" height="56" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+    <circle cx="368" cy="354" r="11" fill="#0969da"/><text class="num" x="368" y="358" text-anchor="middle">3</text>
+    <text class="name" x="390" y="349">Call the model</text>
+    <text class="line" x="390" y="368">Llama 3.1 8B through Ollama · temperature 0.1</text>
+  </g>
+  <g>
+    <rect class="step" x="344" y="400" width="360" height="56" rx="8"/>
+    <circle cx="368" cy="428" r="11" fill="#57606a"/><text class="num" x="368" y="432" text-anchor="middle">4</text>
+    <text class="name" x="390" y="423">Validate</text>
+    <text class="line" x="390" y="442">JSON schema · repair or drop unknown technique IDs</text>
+  </g>
+  <g>
+    <rect class="step" x="344" y="474" width="360" height="56" rx="8"/>
+    <circle cx="368" cy="502" r="11" fill="#57606a"/><text class="num" x="368" y="506" text-anchor="middle">5</text>
+    <text class="name" x="390" y="497">Apply the severity floor</text>
+    <text class="line" x="390" y="516">rules raise the model's verdict, never lower it</text>
+  </g>
+
+  <!-- Step connectors -->
+  <path class="edge" d="M524 234V250" marker-end="url(#arrow)"/>
+  <path class="edge" d="M524 308V324" marker-end="url(#arrow)"/>
+  <path class="edge" d="M524 382V398" marker-end="url(#arrow)"/>
+  <path class="edge" d="M524 456V472" marker-end="url(#arrow)"/>
+  <text class="note" x="534" y="246">/prefilter returns here</text>
+  <text class="note" x="344" y="551">All five steps are tested without a running model (107 tests).</text>
+
+  <!-- Ollama -->
+  <g>
+    <rect x="756" y="306" width="216" height="96" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+    <text class="name" x="772" y="332">Ollama</text>
+    <text class="line" x="772" y="352" style="fill:#1f2328">Llama 3.1 8B · 4.9 GB</text>
+    <text class="line" x="772" y="370" style="fill:#1f2328">local · port 11434</text>
+    <text class="line" x="772" y="388" style="fill:#1f2328">no external API</text>
+  </g>
+  <path d="M704 354H754" fill="none" stroke="#0969da" stroke-width="1.5" marker-start="url(#arrow-accent)" marker-end="url(#arrow-accent)"/>
+
+  <!-- Output -->
+  <g>
+    <rect class="box" x="756" y="440" width="216" height="140" rx="8"/>
+    <text class="name" x="772" y="466">Structured assessment</text>
+    <text class="line" x="772" y="486">verdict · severity · confidence</text>
+    <text class="line" x="772" y="504">MITRE technique</text>
+    <text class="line" x="772" y="522">indicators (IPs, users, hosts)</text>
+    <text class="line" x="772" y="540">recommended actions</text>
+    <text class="line" x="772" y="558">evidence lines</text>
+  </g>
+  <path class="edge" d="M704 502H754" marker-end="url(#arrow)"/>
+
+  <!-- Health check -->
+  <g>
+    <rect class="box" x="756" y="126" width="216" height="84" rx="8"/>
+    <text class="name" x="772" y="152">Readiness check</text>
+    <text class="line" x="772" y="172">/healthz asks Ollama whether</text>
+    <text class="line" x="772" y="190">the model is downloaded</text>
+  </g>
+  <path class="edge" d="M864 210V304" marker-end="url(#arrow)" stroke-dasharray="4 4"/>
+</svg>
