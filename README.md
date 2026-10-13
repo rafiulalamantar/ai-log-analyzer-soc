@@ -1,10 +1,18 @@
 # AI-Powered Incident Response and Security Log Analysis System
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23331566.svg)](https://doi.org/10.5281/zenodo.23331566)
+
 Local-first SOC log analysis: raw log text in, a structured threat assessment out.
 Inference runs on your own machine via Ollama, so log data never leaves the host.
 
-Implements Phases 1–3 of the build plan (FastAPI + Ollama core, structured output,
-deterministic pre-filter) and the Phase 5 evaluation harness.
+Implements the full build plan: the FastAPI + Ollama core with structured output,
+the deterministic pre-filter, the Streamlit dashboard, the evaluation harness and
+the n8n triage workflow.
+
+To cite it, use the archived release on Zenodo: Antar, R. A. (2026). *AI-Powered
+Incident Response and Security Log Analysis System* (v1.0.1).
+https://doi.org/10.5281/zenodo.23331566
+
 See the project report (`1791647043721_AI.docx`) for the full design.
 
 ## Status
