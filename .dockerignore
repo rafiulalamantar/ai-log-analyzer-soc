@@ -1,0 +1,13 @@
+.git
+.github
+.venv
+.pytest_cache
+**/__pycache__
+*.docx
+.env
+data/incidents
+data/runs
+docs
+tests
+scripts
+n8n

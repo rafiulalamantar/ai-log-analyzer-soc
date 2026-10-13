@@ -86,3 +86,12 @@ def test_alert_threshold_matches_the_rules_verdict_mapping():
                     NODES["Rules rate it high or critical?"]["parameters"]["conditions"]["conditions"]}
     assert floor_values == {"high", "critical"}
     assert "['high', 'critical'].includes(a.severity)" in code("Incident record")
+
+
+def test_docker_can_swap_the_api_address():
+    # docker-compose.yml rewrites this one address to http://api:8000 on import;
+    # a second copy, or a changed spelling, would leave n8n calling itself.
+    raw = (ROOT / "n8n" / "soc_triage.json").read_text()
+    assert raw.count("http://127.0.0.1:8000") == 1
+    compose = (ROOT / "docker-compose.yml").read_text()
+    assert "s#http://127.0.0.1:8000#http://api:8000#" in compose

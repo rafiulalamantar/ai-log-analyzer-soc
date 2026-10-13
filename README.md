@@ -37,7 +37,7 @@ Ollama, and it runs on the same machine.
 | Deterministic pre-filter (8 rules, severity floor) | done |
 | Log corpus | 6 dev + 29 held-out samples, labelled |
 | Evaluation harness | done (`scripts/evaluate.py`) |
-| Test suite | 107 tests, runs without Ollama |
+| Test suite | 108 tests, runs without Ollama |
 | Streamlit dashboard | done |
 | n8n triage workflow | done |
 
@@ -149,6 +149,37 @@ exactly what any other client gets. `tests/test_dashboard.py` routes those calls
 into the in-process API (model stubbed), so a mismatch between the API's
 response shape and what the dashboard reads fails the suite.
 
+## Run with Docker
+
+One command starts the API, the dashboard and n8n. Ollama stays on the host:
+Docker on macOS cannot use the Apple GPU, so a containerised model would run on
+the CPU and be much slower.
+
+```bash
+ollama list                     # Ollama running on the host, llama3.1:8b pulled
+docker compose up --build       # API :8000, dashboard :8501, n8n :5678
+docker compose down             # stop (n8n's data survives in a volume)
+```
+
+| Service | URL | Notes |
+|---|---|---|
+| `api` | http://localhost:8000/docs | reaches host Ollama at `host.docker.internal:11434` |
+| `dashboard` | http://localhost:8501 | talks to the API at `http://api:8000` |
+| `n8n` | http://localhost:5678 | official `n8nio/n8n:2.42.7` image; workflow imported and published on start |
+
+Logs sent with `scripts/ship_logs.py` land in `data/incidents/` on the host, as
+in the native setup. The workflow file addresses the API as `127.0.0.1:8000`
+for a native install; the n8n container rewrites that one address to
+`http://api:8000` on import, so the file needs no Docker-specific copy (a test
+checks the address appears exactly once).
+
+On a Linux machine with a GPU, Ollama can run as a fourth container:
+`OLLAMA_HOST=http://ollama:11434 docker compose --profile ollama up --build`,
+then `docker compose exec ollama ollama pull llama3.1:8b`.
+
+CI builds the image and checks that the API container answers on every push
+and pull request.
+
 ## Automation (n8n)
 
 `n8n/soc_triage.json` turns the API into an alerting pipeline. Each log posted
@@ -192,7 +223,7 @@ finished, which is what paces the shipper.
 .venv/bin/python -m pytest tests/ -q
 ```
 
-107 tests, no Ollama and no network required — verify that claim with:
+108 tests, no Ollama and no network required — verify that claim with:
 
 ```bash
 OLLAMA_HOST=http://localhost:9 .venv/bin/python -m pytest tests/ -q
@@ -235,6 +266,8 @@ data/eval/             evaluation output, per dataset
 scripts/evaluate.py    scores rules / model / combined against the labels
 scripts/smoke.sh       end-to-end check against a running API
 scripts/ship_logs.py   sends log files to the n8n workflow (stands in for a collector)
+Dockerfile             one image for the API and the dashboard
+docker-compose.yml     API, dashboard and n8n (+ optional Ollama)
 n8n/
   soc_triage.json      the triage workflow
   start.sh             imports, publishes and starts it
