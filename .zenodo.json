@@ -1,0 +1,18 @@
+{
+  "title": "AI-Powered Incident Response and Security Log Analysis System",
+  "upload_type": "software",
+  "description": "A local system that analyses security logs with a large language model (Llama 3.1 8B through Ollama) and eight deterministic rules, returning structured, MITRE ATT&CK-mapped assessments. It includes a FastAPI backend, a Streamlit analyst dashboard, an n8n triage workflow, and an evaluation harness with a held-out set of 29 labelled logs. Capstone project.",
+  "creators": [
+    {"name": "Antar, Rafiul Alam"}
+  ],
+  "license": "MIT",
+  "keywords": [
+    "security operations center",
+    "log analysis",
+    "large language models",
+    "incident response",
+    "MITRE ATT&CK",
+    "Ollama",
+    "Llama 3.1"
+  ]
+}

@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "AI-Powered Incident Response and Security Log Analysis System"
+authors:
+  - family-names: Antar
+    given-names: Rafiul Alam
+repository-code: "https://github.com/rafiulalamantar/ai-log-analyzer-soc"
+license: MIT
+keywords:
+  - security operations center
+  - log analysis
+  - large language models
+  - MITRE ATT&CK
