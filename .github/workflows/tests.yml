@@ -25,3 +25,42 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: python -m pytest tests/ -q
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config --quiet
+      - run: docker build -t ai-log-analyzer-soc .
+      - name: API container answers
+        run: |
+          docker run -d --name api -p 8000:8000 ai-log-analyzer-soc
+          for i in $(seq 1 30); do curl -sf localhost:8000/ && exit 0; sleep 1; done
+          docker logs api; exit 1
+      - name: n8n runs the workflow against the API container
+        env:
+          OLLAMA_HOST: http://localhost:9
+        run: |
+          docker rm -f api
+          mkdir -p data/incidents && chmod 777 data/incidents
+          docker compose up -d api n8n
+          for i in $(seq 1 90); do curl -sf localhost:5678/healthz >/dev/null && break; sleep 2; done
+          # 1. The workflow n8n actually runs addresses the API container.
+          docker compose exec -T n8n n8n export:workflow --id=socTriage0000001 --output=/tmp/live.json
+          docker compose exec -T n8n grep -q "http://api:8000" /tmp/live.json
+          if docker compose exec -T n8n grep -q "http://127.0.0.1:8000" /tmp/live.json; then
+            echo "old address still present"; exit 1
+          fi
+          # 2. A log through the webhook reaches the API. There is no Ollama here,
+          #    so /analyze fails (502 from n8n), but the rule alert is still written.
+          code=$(curl -s -o /tmp/reply.json -w '%{http_code}' localhost:5678/webhook/soc-triage \
+            -H 'content-type: application/json' \
+            -d '{"log":"Oct  9 16:40:13 db02 useradd[7721]: new user: name=svc, UID=0, GID=0, home=/home/svc","source":"ci"}')
+          cat /tmp/reply.json; echo
+          test "$code" = 502
+          grep -q '"route":"error"' /tmp/reply.json
+          grep '"stage":"rules"' data/incidents/alerts.jsonl | grep -q '"source":"ci"'
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose logs
