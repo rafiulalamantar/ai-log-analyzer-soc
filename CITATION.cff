@@ -7,6 +7,9 @@ authors:
     given-names: Rafiul Alam
 repository-code: "https://github.com/rafiulalamantar/ai-log-analyzer-soc"
 license: MIT
+version: 1.0.1
+doi: 10.5281/zenodo.23331566
+date-released: 2026-10-13
 keywords:
   - security operations center
   - log analysis
