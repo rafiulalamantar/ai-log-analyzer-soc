@@ -1,5 +1,6 @@
 # AI-Powered Incident Response and Security Log Analysis System
 
+[![tests](https://github.com/rafiulalamantar/ai-log-analyzer-soc/actions/workflows/tests.yml/badge.svg)](https://github.com/rafiulalamantar/ai-log-analyzer-soc/actions/workflows/tests.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23331566.svg)](https://doi.org/10.5281/zenodo.23331566)
 
 Local-first SOC log analysis: raw log text in, a structured threat assessment out.

@@ -1,0 +1,27 @@
+# Runs the full test suite on every push to main and every pull request.
+# The suite needs no Ollama and no network: the model is stubbed or replayed
+# from recorded responses, and OLLAMA_HOST points at a closed port to prove it.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      OLLAMA_HOST: http://localhost:9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m pytest tests/ -q
