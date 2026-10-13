@@ -1,7 +1,7 @@
 # AI-Powered Incident Response and Security Log Analysis System
 
 [![tests](https://github.com/rafiulalamantar/ai-log-analyzer-soc/actions/workflows/tests.yml/badge.svg)](https://github.com/rafiulalamantar/ai-log-analyzer-soc/actions/workflows/tests.yml)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23331566.svg)](https://doi.org/10.5281/zenodo.23331566)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23331565.svg)](https://doi.org/10.5281/zenodo.23331565)
 
 Local-first SOC log analysis: raw log text in, a structured threat assessment out.
 Inference runs on your own machine via Ollama, so log data never leaves the host.
@@ -11,8 +11,9 @@ the deterministic pre-filter, the Streamlit dashboard, the evaluation harness an
 the n8n triage workflow.
 
 To cite it, use the archived release on Zenodo: Antar, R. A. (2026). *AI-Powered
-Incident Response and Security Log Analysis System* (v1.0.1).
-https://doi.org/10.5281/zenodo.23331566
+Incident Response and Security Log Analysis System*. Zenodo.
+https://doi.org/10.5281/zenodo.23331565 (this DOI always resolves to the latest
+version; each release also has its own version DOI on that page).
 
 See the project report (`1791647043721_AI.docx`) for the full design.
 
