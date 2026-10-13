@@ -41,7 +41,7 @@
     <rect class="box" x="40" y="236" width="230" height="84" rx="8"/>
     <text class="name" x="56" y="262">Command-line scripts</text>
     <text class="line" x="56" y="282">smoke.sh · ship_logs.py</text>
-    <text class="line" x="56" y="300">evaluate.py (scoring harness)</text>
+    <text class="line" x="56" y="300">send log files over HTTP</text>
   </g>
   <g>
     <rect class="box" x="40" y="346" width="230" height="84" rx="8"/>
