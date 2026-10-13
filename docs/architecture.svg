@@ -105,7 +105,7 @@
   <path class="edge" d="M524 382V398" marker-end="url(#arrow)"/>
   <path class="edge" d="M524 456V472" marker-end="url(#arrow)"/>
   <text class="note" x="534" y="246">/prefilter returns here</text>
-  <text class="note" x="344" y="551">All five steps are tested without a running model (107 tests).</text>
+  <text class="note" x="344" y="551">All five steps are tested without a running model.</text>
 
   <!-- Ollama -->
   <g>
