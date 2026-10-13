@@ -15,6 +15,15 @@ https://doi.org/10.5281/zenodo.23331566
 
 See the project report (`1791647043721_AI.docx`) for the full design.
 
+## Architecture
+
+![System architecture: three clients call one FastAPI backend, which runs the rules, then a local Llama 3.1 model through Ollama](docs/architecture.svg)
+
+Every client goes through the same API, so the dashboard, n8n and the evaluation
+harness all see identical results. `/prefilter` stops after the rules (step 1);
+`/analyze` runs all five steps. Only step 3 needs Ollama, and it runs on the
+same machine.
+
 ## Status
 
 | Component | State |
