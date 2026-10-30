@@ -57,7 +57,9 @@ async def analyze(log: str, source: str | None = None) -> tuple[Analysis, int]:
                 f"{settings.ollama_host}/api/generate", json=payload
             )
             reply.raise_for_status()
-    except (httpx.ConnectError, httpx.TimeoutException) as exc:
+    except httpx.TransportError as exc:
+        # Refused, timed out, or dropped mid-generation (a runner killed while
+        # the request was in flight): all mean the engine is unavailable.
         raise LLMUnavailable(str(exc)) from exc
     except httpx.HTTPStatusError as exc:
         raise LLMUnavailable(

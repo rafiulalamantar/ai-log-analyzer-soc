@@ -38,7 +38,7 @@ Ollama, and it runs on the same machine.
 | Deterministic pre-filter (8 rules, severity floor) | done |
 | Log corpus | 6 dev + 29 held-out samples, labelled |
 | Evaluation harness | done (`scripts/evaluate.py`) |
-| Test suite | 108 tests, runs without Ollama |
+| Test suite | 109 tests, runs without Ollama |
 | Streamlit dashboard | done |
 | n8n triage workflow | done |
 
@@ -224,7 +224,7 @@ finished, which is what paces the shipper.
 .venv/bin/python -m pytest tests/ -q
 ```
 
-108 tests, no Ollama and no network required — verify that claim with:
+109 tests, no Ollama and no network required — verify that claim with:
 
 ```bash
 OLLAMA_HOST=http://localhost:9 .venv/bin/python -m pytest tests/ -q
