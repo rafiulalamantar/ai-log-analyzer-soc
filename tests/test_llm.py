@@ -131,6 +131,13 @@ def test_timeout_raises_unavailable(monkeypatch):
         run(llm.analyze("x", None))
 
 
+
+def test_dropped_connection_raises_unavailable(monkeypatch):
+    """Seen live: Ollama.app replaced the CLI server mid-request, the API 500'd."""
+    transport_for(monkeypatch, fails_with(httpx.RemoteProtocolError, "server disconnected"))
+    with pytest.raises(llm.LLMUnavailable):
+        run(llm.analyze("x", None))
+
 # --- readiness probe -------------------------------------------------------
 
 def test_ping_lists_pulled_models(monkeypatch):
