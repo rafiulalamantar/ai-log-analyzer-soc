@@ -10,7 +10,7 @@ Implements the full build plan: the FastAPI + Ollama core with structured output
 the deterministic pre-filter, the Streamlit dashboard, the evaluation harness and
 the n8n triage workflow.
 
-To cite it, use the archived release on Zenodo: Antar, R. A. (2026). *AI-Powered
+To cite it, use the archived release on Zenodo: Antar, R. A., & Islam, M. Z. (2026). *AI-Powered
 Incident Response and Security Log Analysis System*. Zenodo.
 https://doi.org/10.5281/zenodo.23331565 (this DOI always resolves to the latest
 version; each release also has its own version DOI on that page).
